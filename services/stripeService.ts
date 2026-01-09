@@ -1,0 +1,66 @@
+
+import { UserProfile } from '../types';
+import { PRICING_PACKAGES } from './userService';
+
+export const stripeService = {
+  /**
+   * Redirects the user to a real Stripe Checkout page hosted on Cloudflare Pages Functions.
+   */
+  redirectToCheckout: async (user: UserProfile, packageId: string): Promise<void> => {
+    const pkg = PRICING_PACKAGES.find(p => p.id === packageId);
+    if (!pkg) throw new Error("Invalid package selected");
+
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId: pkg.id,
+          userId: user.id,
+          userEmail: user.email
+        })
+      });
+
+      const data = await response.json().catch(() => ({ error: "The server response was not valid JSON." }));
+      
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        const errorMsg = data.error || `Error ${response.status}: ${response.statusText}`;
+        console.error("Stripe Checkout Error:", errorMsg);
+        
+        if (errorMsg.includes("Configuration Error")) {
+          alert("Admin Configuration Required:\n\n" + errorMsg);
+        } else {
+          throw new Error(errorMsg);
+        }
+      }
+    } catch (error: any) {
+      console.error("Stripe Service Exception:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Redirects the user to Stripe's hosted Customer Portal to manage/cancel subscription.
+   */
+  redirectToCustomerPortal: async (customerId: string): Promise<void> => {
+    try {
+      const response = await fetch('/api/customer-portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Failed to open billing portal");
+      }
+    } catch (error: any) {
+      console.error("Billing Portal Error:", error);
+      alert("Error: " + error.message);
+    }
+  }
+};
