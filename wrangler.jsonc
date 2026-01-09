@@ -1,3 +1,4 @@
+// Configuration for Cloudflare Pages
 {
   "name": "invoiceintel",
   "compatibility_date": "2024-04-05",
