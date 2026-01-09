@@ -1,5 +1,4 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
 import { ExpenseCategory } from "../types";
 
 export const fileToGenerativePart = async (file: File | Blob): Promise<{ mimeType: string; data: string }> => {
@@ -23,51 +22,31 @@ export const fileToGenerativePart = async (file: File | Blob): Promise<{ mimeTyp
   });
 };
 
-// Plain object for responseSchema recommended for structured extraction
-const expenseSchema = {
-  type: Type.OBJECT,
-  properties: {
-    vendorName: { type: Type.STRING, description: "Name of the merchant or vendor" },
-    date: { type: Type.STRING, description: "Date of transaction in YYYY-MM-DD format" },
-    amount: { type: Type.NUMBER, description: "Total amount paid (numeric)" },
-    currency: { type: Type.STRING, description: "Currency code (e.g., MYR, USD, RM)" },
-    category: { 
-      type: Type.STRING, 
-      enum: Object.values(ExpenseCategory),
-      description: "Select the most appropriate category"
-    },
-    summary: { type: Type.STRING, description: "Brief description of the purchase" }
-  },
-  required: ["vendorName", "date", "amount", "category"]
-};
-
 export const extractInvoiceData = async (file: File | Blob) => {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const filePart = await fileToGenerativePart(file);
-    const modelId = 'gemini-3-pro-preview';
 
-    const result = await ai.models.generateContent({
-      model: modelId,
-      contents: {
-        parts: [
-          { inlineData: filePart },
-          { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, and categorize it based on the provided schema. If the date is not clear, use today's date." }
-        ]
+    // Call server-side function to hide API Key
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: expenseSchema,
-        temperature: 0.1
-      }
+      body: JSON.stringify({
+        image: filePart.data,
+        mimeType: filePart.mimeType
+      })
     });
 
-    const textOutput = result.text;
-    if (!textOutput) throw new Error("No data returned from Gemini");
-    
-    return JSON.parse(textOutput.trim());
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Unknown server error' }));
+      throw new Error(err.error || response.statusText);
+    }
+
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error("Error calling Gemini API:", error);
+    console.error("Error calling Analysis API:", error);
     throw error;
   }
 };
