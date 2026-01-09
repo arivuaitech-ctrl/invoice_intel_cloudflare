@@ -1,4 +1,3 @@
-
 # InvoiceIntel - AI Expense Tracker
 
 Smart expense tracking for professionals. Uses Google Gemini AI to extract data from invoices and receipts.
@@ -31,11 +30,11 @@ This app is optimized for **Cloudflare Pages**.
 1.  Connect your GitHub repository to Cloudflare Pages.
 2.  Set the **Build command** to `npm run build`.
 3.  Set the **Output directory** to `dist`.
-4.  Configure **Environment Variables** in the Cloudflare Dashboard:
+4.  Configure **Environment Variables** in the Cloudflare Dashboard for both **Production** and **Preview**:
     - `API_KEY`: Your Gemini API Key.
     - `SUPABASE_URL`: Your Supabase Project URL.
     - `SUPABASE_ANON_KEY`: Your Supabase Anon Key.
-    - `SUPABASE_SERVICE_ROLE_KEY`: (For Webhooks) Your Supabase Service Role Key.
+    - `SUPABASE_SERVICE_ROLE_KEY`: Your Supabase Service Role Key.
     - `STRIPE_SECRET_KEY`: Your Stripe Secret Key.
     - `STRIPE_WEBHOOK_SECRET`: Your Stripe Webhook Signing Secret.
     - `STRIPE_PRICE_ID_BASIC`: The Stripe Price ID for the Basic plan.
@@ -43,5 +42,5 @@ This app is optimized for **Cloudflare Pages**.
     - `STRIPE_PRICE_ID_BUSINESS`: The Stripe Price ID for the Business plan.
     - `SITE_URL`: Your deployed URL (e.g., `https://your-app.pages.dev`).
 
-### Functions:
-API routes are automatically handled by the files in the `/functions` directory. No extra configuration is needed for routing.
+### Troubleshooting "Missing entry-point"
+If you see an error regarding a missing entry-point during deployment, ensure the `wrangler.jsonc` file is present in your repository root with the `pages_build_output_dir` set to `dist`.
