@@ -26,7 +26,11 @@ import LoginPage from './components/LoginPage';
 import PricingModal from './components/PricingModal';
 import ImageViewer from './components/ImageViewer';
 
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#a855f7', '#64748b'];
+const COLORS = [
+  '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#84cc16', '#a855f7', '#64748b',
+  '#fb7185', '#38bdf8', '#fbbf24', '#34d399', '#818cf8'
+];
 
 type ViewType = 'expenses' | 'analytics';
 
@@ -478,6 +482,27 @@ export default function App() {
         imageUrl={viewingImage?.url}
         title={viewingImage?.title || ''}
       />
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-100 mt-8">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-slate-400 font-medium">
+            © {new Date().getFullYear()} InvoiceIntel. All rights reserved.
+          </p>
+          <div className="flex gap-6">
+            <a
+              href="mailto:arivu.ai.tech@gmail.com?subject=Privacy Inquiry"
+              className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <a
+              href="mailto:arivu.ai.tech@gmail.com?subject=Terms Inquiry"
+              className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
+            >
+              Terms of Service
+            </a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

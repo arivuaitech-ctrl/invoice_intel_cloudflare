@@ -15,11 +15,11 @@ const mapToDb = (item: ExpenseItem, userId?: string) => {
     image_data: item.imageData,
     created_at: item.createdAt
   };
-  
+
   if (userId) {
     data.user_id = userId;
   }
-  
+
   return data;
 };
 
@@ -64,10 +64,10 @@ export const db = {
 
   update: async (updatedItem: ExpenseItem, userId: string): Promise<void> => {
     const payload = mapToDb(updatedItem);
-    delete payload.id; 
+    delete payload.id;
     delete payload.user_id;
-    delete payload.created_at; 
-    
+    delete payload.created_at;
+
     const { data, error, status } = await supabase
       .from('expenses')
       .update(payload)
@@ -79,7 +79,7 @@ export const db = {
       console.error("Supabase Update Error:", error);
       throw error;
     }
-    
+
     if (!data || data.length === 0) {
       console.warn("Update succeeded but 0 rows affected. Check RLS Policies in Supabase.");
     }
@@ -96,7 +96,7 @@ export const db = {
       console.error("Supabase Delete Error:", error);
       throw error;
     }
-    
+
     if (count === 0) {
       console.warn("Delete succeeded but 0 rows removed. Check if user_id matches.");
     }
@@ -114,18 +114,23 @@ export const db = {
   getBudgets: (): BudgetMap => {
     const data = localStorage.getItem('invoice_intel_budgets_v1');
     if (data) return JSON.parse(data);
-    
+
     // Fix: Correctly initialize all required categories for the BudgetMap type (Record<ExpenseCategory, number>)
     return {
       [ExpenseCategory.FOOD]: 0,
-      [ExpenseCategory.GROCERIES]: 0,
-      [ExpenseCategory.UTILITY]: 0,
+      [ExpenseCategory.PARKING]: 0,
+      [ExpenseCategory.TOLL]: 0,
+      [ExpenseCategory.OPTICAL]: 0,
+      [ExpenseCategory.DENTAL]: 0,
+      [ExpenseCategory.CLINIC]: 0,
+      [ExpenseCategory.MILEAGE]: 0,
+      [ExpenseCategory.AIRPORT]: 0,
       [ExpenseCategory.TRANSPORT]: 0,
+      [ExpenseCategory.UTILITY]: 0,
+      [ExpenseCategory.REPAIR]: 0,
+      [ExpenseCategory.HOUSE_TAX]: 0,
+      [ExpenseCategory.FLIGHT]: 0,
       [ExpenseCategory.HOTEL]: 0,
-      [ExpenseCategory.SUBSCRIPTION]: 0,
-      [ExpenseCategory.HEALTHCARE]: 0,
-      [ExpenseCategory.ENTERTAINMENT]: 0,
-      [ExpenseCategory.SHOPPING]: 0,
       [ExpenseCategory.OTHERS]: 0,
     };
   },

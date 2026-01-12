@@ -26,8 +26,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
                 currency: { type: "STRING", description: "Currency code (e.g., MYR, USD, RM)" },
                 category: {
                     type: "STRING",
-                    enum: ["Food", "Transport", "Shopping", "Bills", "Entertainment", "Health", "Education", "Travel", "Others"],
-                    description: "Select the most appropriate category"
+                    enum: [
+                        "Food & Dining", "Parking", "Toll", "Optical", "Dental",
+                        "Clinic/Medical", "Mileage", "Airport Charges", "Transportation",
+                        "Utility Bills", "Repair & Maintenance", "House Tax",
+                        "Flights", "Accommodation", "Others"
+                    ],
+                    description: "Select the most appropriate category for tax filing/claims"
                 },
                 summary: { type: "STRING", description: "Brief description of the purchase" }
             },

@@ -1,14 +1,19 @@
 
 export enum ExpenseCategory {
-  FOOD = 'Dining',
-  GROCERIES = 'Groceries',
-  UTILITY = 'Utilities',
-  TRANSPORT = 'Transport',
-  HOTEL = 'Travel',
-  SUBSCRIPTION = 'Subscriptions',
-  HEALTHCARE = 'Healthcare',
-  ENTERTAINMENT = 'Entertainment',
-  SHOPPING = 'Shopping',
+  FOOD = 'Food & Dining',
+  PARKING = 'Parking',
+  TOLL = 'Toll',
+  OPTICAL = 'Optical',
+  DENTAL = 'Dental',
+  CLINIC = 'Clinic/Medical',
+  MILEAGE = 'Mileage',
+  AIRPORT = 'Airport Charges',
+  TRANSPORT = 'Transportation',
+  UTILITY = 'Utility Bills',
+  REPAIR = 'Repair & Maintenance',
+  HOUSE_TAX = 'House Tax',
+  FLIGHT = 'Flights',
+  HOTEL = 'Accommodation',
   OTHERS = 'Others'
 }
 
@@ -43,14 +48,14 @@ export interface UserProfile {
   name: string;
   email: string;
   avatarUrl?: string;
-  
+
   // Subscription Fields
   planId: 'free' | 'basic' | 'pro' | 'business';
   subscriptionExpiry: number | null; // Timestamp
   monthlyDocsLimit: number;
   docsUsedThisMonth: number;
-  
-  trialStartDate: number; 
+
+  trialStartDate: number;
   isTrialActive: boolean;
   stripeCustomerId?: string; // Added to handle portal redirects
 }
