@@ -13,6 +13,7 @@ interface Env {
 export async function onRequestPost(context: { env: Env; request: Request }) {
   const stripe = new Stripe(context.env.STRIPE_SECRET_KEY, {
     apiVersion: '2023-10-16' as any,
+    httpClient: Stripe.createFetchHttpClient(),
   });
 
   try {
@@ -44,9 +45,9 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       success_url: `${cleanBaseUrl}/?session_id={CHECKOUT_SESSION_ID}&payment=success`,
       cancel_url: `${cleanBaseUrl}/?payment=cancelled`,
       customer_email: userEmail,
-      metadata: { 
+      metadata: {
         userId,
-        planId: priceId 
+        planId: priceId
       },
       allow_promotion_codes: true,
     });

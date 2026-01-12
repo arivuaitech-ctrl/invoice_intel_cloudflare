@@ -43,6 +43,7 @@ const updateProfile = async (env: Env, userId: string, planId: string, customerI
 export async function onRequestPost(context: { env: Env; request: Request }) {
   const stripe = new Stripe(context.env.STRIPE_SECRET_KEY, {
     apiVersion: '2023-10-16' as any,
+    httpClient: Stripe.createFetchHttpClient(),
   });
 
   const sig = context.request.headers.get('stripe-signature');
