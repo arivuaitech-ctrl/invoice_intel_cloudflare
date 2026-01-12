@@ -94,7 +94,6 @@ export default function App() {
 
         if (session?.user) {
           const profile = await userService.upsertProfile(session.user);
-          console.log("Logged in profile:", profile);
           setUser(profile);
 
           const data = await db.getAll(session.user.id);
