@@ -64,7 +64,8 @@ export default function App() {
 
   const pollIntervalRef = useRef<number | null>(null);
 
-  const isGeminiKeyMissing = !process.env.API_KEY;
+  // The API key is now handled server-side in Cloudflare Functions
+  const isGeminiKeyMissing = false;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -166,10 +167,7 @@ export default function App() {
 
   async function handleFilesSelect(files: (File | Blob)[]) {
     if (!user) return;
-    if (isGeminiKeyMissing) {
-      alert("AI Processing unavailable: API Key missing.");
-      return;
-    }
+    // AI Extraction is handled server-side; availability is verified at runtime.
     const status = userService.canUpload(user, files.length);
     if (!status.allowed) {
       setIsPricingModalOpen(true);
