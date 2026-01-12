@@ -67,14 +67,20 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       const planId = session.metadata?.planId || 'pro';
       const customerId = session.customer as string;
 
+      console.log(`Webhook: Processing Checkout ${session.id}. User: ${userId}, Plan: ${planId}`);
+
       if (userId) {
-        await updateProfile(context.env, userId, planId, customerId);
+        const success = await updateProfile(context.env, userId, planId, customerId);
+        console.log(`Webhook: Profile update success: ${success}`);
+      } else {
+        console.warn("Webhook: Missing userId in metadata!");
       }
     }
 
     if (stripeEvent.type === 'customer.subscription.created') {
       const subscription = stripeEvent.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
+      console.log(`Webhook: Processing Subscription ${subscription.id} for Customer ${customerId}`);
 
       const sessions = await stripe.checkout.sessions.list({ customer: customerId, limit: 1 });
       if (sessions.data.length > 0) {
@@ -82,13 +88,15 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
         const userId = session.metadata?.userId;
         const planId = session.metadata?.planId || 'pro';
         if (userId) {
-          await updateProfile(context.env, userId, planId, customerId);
+          const success = await updateProfile(context.env, userId, planId, customerId);
+          console.log(`Webhook: Profile update success (via sub created): ${success}`);
         }
       }
     }
 
     return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (err: any) {
-    return new Response("Internal Server Error", { status: 500 });
+    console.error("Webhook Internal Error:", err.message);
+    return new Response(`Internal Server Error: ${err.message}`, { status: 500 });
   }
 }

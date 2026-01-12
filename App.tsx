@@ -112,10 +112,13 @@ export default function App() {
 
     // Fallback: Force stop loading if it hangs for more than 10 seconds
     const fallback = setTimeout(() => {
-      if (loading) {
-        console.warn("App: Initialization timing out, forcing UI...");
-        setLoading(false);
-      }
+      setLoading(prevLoading => {
+        if (prevLoading) {
+          console.warn("App: Initialization timing out, forcing UI...");
+          return false;
+        }
+        return prevLoading;
+      });
     }, 10000);
 
     return () => {
