@@ -84,42 +84,24 @@ export default function App() {
     }
 
     const initAuth = async () => {
-      console.log("App: Initializing Auth...");
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        console.log("App: Auth Session Check:", session ? "User logged in" : "No session");
 
         if (session?.user) {
-          console.log("App: Fetching Profile for:", session.user.id);
           const profile = await userService.upsertProfile(session.user);
-          console.log("App: Profile Loaded:", profile.planId);
           setUser(profile);
 
-          console.log("App: Loading Expenses...");
           const data = await db.getAll(session.user.id);
-          console.log("App: Expenses Loaded:", data.length);
           setExpenses(data);
         }
       } catch (err) {
-        console.error("App: Critical Auth Init Error:", err);
+        console.error("Auth init error:", err);
       } finally {
-        console.log("App: Initialization Finished");
         setLoading(false);
       }
     };
 
     initAuth();
-
-    // Fallback: Force stop loading if it hangs for more than 10 seconds
-    const fallback = setTimeout(() => {
-      setLoading(prevLoading => {
-        if (prevLoading) {
-          console.warn("App: Initialization timing out, forcing UI...");
-          return false;
-        }
-        return prevLoading;
-      });
-    }, 10000);
 
     return () => {
       clearTimeout(fallback);

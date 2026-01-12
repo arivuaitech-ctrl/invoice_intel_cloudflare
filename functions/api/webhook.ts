@@ -36,7 +36,11 @@ const updateProfile = async (env: Env, userId: string, planId: string, customerI
     return false;
   }
 
-  return data && data.length > 0;
+  if (!data || data.length === 0) {
+    console.warn(`Webhook Warn: Profile for ID ${userId} not found in database. Nothing updated.`);
+    return false;
+  }
+  return true;
 };
 
 // Fix: Use standard function signature instead of PagesFunction type which is not recognized in this environment
