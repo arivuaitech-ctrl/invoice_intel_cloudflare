@@ -11,7 +11,7 @@ interface Env {
 
 const updateProfile = async (env: Env, userId: string, planId: string, customerId: string) => {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-  
+
   const limits: Record<string, number> = {
     'basic': 30,
     'pro': 100,
@@ -20,13 +20,13 @@ const updateProfile = async (env: Env, userId: string, planId: string, customerI
 
   const { data, error } = await supabase
     .from('profiles')
-    .update({ 
+    .update({
       plan_id: planId,
       is_trial_active: false,
       subscription_expiry: Date.now() + (31 * 24 * 60 * 60 * 1000),
       stripe_customer_id: customerId,
       monthly_docs_limit: limits[planId] || 100,
-      docs_used_this_month: 0 
+      docs_used_this_month: 0
     })
     .eq('id', userId)
     .select();
@@ -35,7 +35,7 @@ const updateProfile = async (env: Env, userId: string, planId: string, customerI
     console.error("Webhook Supabase Error:", error);
     return false;
   }
-  
+
   return data && data.length > 0;
 };
 
@@ -50,9 +50,9 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
   let stripeEvent;
 
   try {
-    stripeEvent = stripe.webhooks.constructEvent(
-      body, 
-      sig || '', 
+    stripeEvent = await stripe.webhooks.constructEventAsync(
+      body,
+      sig || '',
       context.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err: any) {
@@ -69,12 +69,12 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       if (userId) {
         await updateProfile(context.env, userId, planId, customerId);
       }
-    } 
-    
+    }
+
     if (stripeEvent.type === 'customer.subscription.created') {
       const subscription = stripeEvent.data.object as Stripe.Subscription;
       const customerId = subscription.customer as string;
-      
+
       const sessions = await stripe.checkout.sessions.list({ customer: customerId, limit: 1 });
       if (sessions.data.length > 0) {
         const session = sessions.data[0];
