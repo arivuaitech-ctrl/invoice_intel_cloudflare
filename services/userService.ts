@@ -141,7 +141,7 @@ export const userService = {
     const isTrialExpired = (now - user.trialStartDate) > SEVEN_DAYS_MS;
 
     if (updated.planId === 'free') {
-      updated.isTrialActive = !isTrialExpired;
+      updated.isTrialActive = !isTrialExpired && !updated.isAdmin;
       // If trial is still active but docs limit is somehow 0, reset to trial default (10)
       if (updated.isTrialActive && updated.monthlyDocsLimit === 0) {
         updated.monthlyDocsLimit = 10;

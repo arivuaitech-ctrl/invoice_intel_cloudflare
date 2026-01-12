@@ -94,6 +94,7 @@ export default function App() {
 
         if (session?.user) {
           const profile = await userService.upsertProfile(session.user);
+          console.log("Logged in profile:", profile);
           setUser(profile);
 
           const data = await db.getAll(session.user.id);
@@ -291,6 +292,7 @@ export default function App() {
   }
 
   const badgeInfo = () => {
+    if (user.isAdmin) return { text: 'Admin Mode', color: 'bg-purple-50 text-purple-700 border-purple-200' };
     if (user.isTrialActive) return { text: `Trial: ${user.monthlyDocsLimit - user.docsUsedThisMonth} left`, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     if (user.planId === 'free') return { text: 'Limit Reached', color: 'bg-red-50 text-red-700 border-red-200' };
     const remaining = user.monthlyDocsLimit - user.docsUsedThisMonth;
