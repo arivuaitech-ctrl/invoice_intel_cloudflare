@@ -98,6 +98,23 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       }
     }
 
+    if (stripeEvent.type === 'customer.subscription.deleted') {
+      const subscription = stripeEvent.data.object as Stripe.Subscription;
+      const customerId = subscription.customer as string;
+      console.log(`Webhook: Subscription Deleted for Customer ${customerId}`);
+
+      const supabase = createClient(context.env.SUPABASE_URL, context.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          subscription_expiry: 0, // Immediately expire
+          plan_id: 'free'
+        })
+        .eq('stripe_customer_id', customerId);
+
+      if (error) console.error("Webhook Deletion Error:", error);
+    }
+
     return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (err: any) {
     console.error("Webhook Internal Error:", err.message);
