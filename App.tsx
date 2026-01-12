@@ -336,7 +336,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     const subject = encodeURIComponent(`Support Request - ${user.email} (${user.id})`);
-                    const body = encodeURIComponent("Please describe your issue or refund request below:\n\n---\nUser Details:\nID: " + user.id + "\nPlan: " + user.planId);
+                    const body = encodeURIComponent("Please describe your issue below:\n\n---\nUser Details:\nID: " + user.id + "\nPlan: " + user.planId);
                     window.location.href = `mailto:arivu.ai.tech@gmail.com?subject=${subject}&body=${body}`;
                   }}
                   className="text-slate-500 hover:text-indigo-600 p-2 rounded-xl hover:bg-indigo-50 transition-all"
