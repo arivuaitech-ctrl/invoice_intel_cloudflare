@@ -14,7 +14,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         }
 
         const ai = new GoogleGenAI({ apiKey: context.env.API_KEY });
-        const modelId = 'gemini-2.0-flash-exp'; // Use a standard model or the one from previous file if valid
+        const modelId = 'gemini-2.0-flash'; // Using the stable 2.0 Flash model
 
         // Schema for structured output
         const expenseSchema = {
