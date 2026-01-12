@@ -13,9 +13,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
-  const [loginMethod, setLoginMethod] = useState<'email' | 'google'>('email');
+  const [loginMethod, setLoginMethod] = useState<'email' | 'google'>('google');
   const [resendTimer, setResendTimer] = useState(0);
-  
+
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -61,11 +61,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     if (e) e.preventDefault();
     const cleanEmail = email.trim();
     if (!cleanEmail) {
-        setError("Please enter your email address first.");
-        return;
+      setError("Please enter your email address first.");
+      return;
     }
     if (resendTimer > 0) return;
-    
+
     setIsLoading(true);
     setError(null);
     try {
@@ -118,7 +118,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-2xl shadow-slate-200/60 rounded-3xl sm:px-10 border border-slate-100 min-h-[460px] flex flex-col transition-all duration-300">
-          
+
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 animate-shake">
               <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -134,17 +134,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <div className="space-y-6">
                 {/* Tabs */}
                 <div className="flex p-1 bg-slate-100 rounded-xl border border-slate-200/50">
-                  <button 
-                    onClick={() => setLoginMethod('email')}
-                    className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${loginMethod === 'email' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/30' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    Email Code
-                  </button>
-                  <button 
+                  <button
                     onClick={() => setLoginMethod('google')}
                     className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${loginMethod === 'google' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/30' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Google
+                  </button>
+                  <button
+                    onClick={() => setLoginMethod('email')}
+                    className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${loginMethod === 'email' ? 'bg-white text-indigo-600 shadow-sm border border-slate-200/30' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Email Code
                   </button>
                 </div>
 
@@ -211,13 +211,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               </div>
             ) : (
               <div className="space-y-8 animate-fadeIn">
-                <button 
+                <button
                   onClick={() => setStep('email')}
                   className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-700 font-bold transition-colors group"
                 >
                   <ChevronLeft className="w-5 h-5 mr-1 group-hover:-translate-x-1 transition-transform" /> Back
                 </button>
-                
+
                 <div className="text-center">
                   <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
                     <KeyRound className="w-10 h-10 text-indigo-600" />
@@ -249,7 +249,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   >
                     {isLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Sign In"}
                   </button>
-                  
+
                   <div className="text-center">
                     <p className="text-xs text-slate-500">
                       Didn't get a code? {resendTimer > 0 ? (
