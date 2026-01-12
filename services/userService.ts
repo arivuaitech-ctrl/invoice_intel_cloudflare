@@ -3,32 +3,32 @@ import { UserProfile, PricingTier } from '../types';
 import { supabase } from './supabaseClient';
 
 export const PRICING_PACKAGES: PricingTier[] = [
-  { 
-    id: 'basic', 
-    name: 'Personal (Basic)', 
-    limit: 30, 
-    price: 15.90, 
+  {
+    id: 'basic',
+    name: 'Personal (Basic)',
+    limit: 30,
+    price: 15.90,
     description: 'For individuals managing monthly bills.',
     features: ['30 Receipts / Month', 'Standard Processing', 'Excel Export'],
-    popular: false 
+    popular: false
   },
-  { 
-    id: 'pro', 
-    name: 'Freelancer (Pro)', 
-    limit: 100, 
-    price: 39.90, 
+  {
+    id: 'pro',
+    name: 'Freelancer (Pro)',
+    limit: 100,
+    price: 39.90,
     description: 'For agents, freelancers & power users.',
     features: ['100 Receipts / Month', 'Priority AI Processing', 'Spending Analytics'],
-    popular: true 
+    popular: true
   },
-  { 
-    id: 'business', 
-    name: 'SME (Business)', 
-    limit: 500, 
-    price: 89.90, 
+  {
+    id: 'business',
+    name: 'SME (Business)',
+    limit: 500,
+    price: 89.90,
     description: 'For small businesses and teams.',
     features: ['500 Receipts / Month', 'High-Speed Bulk Upload', 'Priority Support'],
-    popular: false 
+    popular: false
   }
 ];
 
@@ -43,7 +43,8 @@ const mapProfile = (data: any): UserProfile => ({
   docsUsedThisMonth: data.docs_used_this_month || 0,
   trialStartDate: data.trial_start_date,
   isTrialActive: data.is_trial_active,
-  stripeCustomerId: data.stripe_customer_id
+  stripeCustomerId: data.stripe_customer_id,
+  isAdmin: !!data.is_admin
 });
 
 export const userService = {
@@ -117,7 +118,8 @@ export const userService = {
       trial_start_date: Date.now(),
       is_trial_active: true,
       docs_used_this_month: 0,
-      monthly_docs_limit: 10 
+      monthly_docs_limit: 10,
+      is_admin: false
     };
 
     const { data, error } = await supabase
@@ -134,10 +136,10 @@ export const userService = {
     let updated = { ...user };
     const now = Date.now();
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-    
+
     // Safety check: trial logic
     const isTrialExpired = (now - user.trialStartDate) > SEVEN_DAYS_MS;
-    
+
     if (updated.planId === 'free') {
       updated.isTrialActive = !isTrialExpired;
       // If trial is still active but docs limit is somehow 0, reset to trial default (10)
@@ -157,21 +159,23 @@ export const userService = {
         updated.isTrialActive = false;
       }
     }
-    
+
     return updated;
   },
 
   canUpload: (user: UserProfile, fileCount: number): { allowed: boolean; reason?: 'trial_limit' | 'plan_limit' | 'expired' } => {
+    if (user.isAdmin) return { allowed: true };
+
     if (user.isTrialActive && user.planId === 'free') {
-        if (user.docsUsedThisMonth + fileCount > user.monthlyDocsLimit) return { allowed: false, reason: 'trial_limit' };
-        return { allowed: true };
+      if (user.docsUsedThisMonth + fileCount > user.monthlyDocsLimit) return { allowed: false, reason: 'trial_limit' };
+      return { allowed: true };
     }
     if (user.planId !== 'free') {
-        // Allow a grace period of 2 hours if expiry is just reached
-        const gracePeriod = 2 * 60 * 60 * 1000;
-        if (user.subscriptionExpiry && (Date.now() > user.subscriptionExpiry + gracePeriod)) return { allowed: false, reason: 'expired' };
-        if (user.docsUsedThisMonth + fileCount > user.monthlyDocsLimit) return { allowed: false, reason: 'plan_limit' };
-        return { allowed: true };
+      // Allow a grace period of 2 hours if expiry is just reached
+      const gracePeriod = 2 * 60 * 60 * 1000;
+      if (user.subscriptionExpiry && (Date.now() > user.subscriptionExpiry + gracePeriod)) return { allowed: false, reason: 'expired' };
+      if (user.docsUsedThisMonth + fileCount > user.monthlyDocsLimit) return { allowed: false, reason: 'plan_limit' };
+      return { allowed: true };
     }
     return { allowed: false, reason: 'expired' };
   },

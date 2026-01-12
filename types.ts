@@ -58,6 +58,7 @@ export interface UserProfile {
   trialStartDate: number;
   isTrialActive: boolean;
   stripeCustomerId?: string; // Added to handle portal redirects
+  isAdmin?: boolean; // New: admin bypass
 }
 
 export interface PricingTier {

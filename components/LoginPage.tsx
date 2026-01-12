@@ -112,7 +112,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           InvoiceIntel
         </h2>
         <p className="mt-2 text-sm text-slate-500 font-medium">
-          Smart Expense Tracking for Professionals
+          Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals
         </p>
       </div>
 

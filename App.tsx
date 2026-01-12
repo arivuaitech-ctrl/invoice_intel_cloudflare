@@ -281,7 +281,7 @@ export default function App() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-        <p className="text-slate-500 text-sm font-medium animate-pulse">Initializing InvoiceIntel...</p>
+        <p className="text-slate-500 text-sm font-medium animate-pulse">Initializing InvoiceIntel: Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals...</p>
       </div>
     </div>
   );
@@ -319,7 +319,10 @@ export default function App() {
               <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-indigo-200 shadow-xl">
                 <Sparkles className="text-white w-6 h-6" />
               </div>
-              <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 ml-2">InvoiceIntel</h1>
+              <div className="ml-2">
+                <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">InvoiceIntel</h1>
+                <p className="text-[10px] text-slate-400 font-bold hidden md:block">Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals</p>
+              </div>
             </div>
 
             <div className="hidden md:flex bg-slate-100 p-1 rounded-xl">
@@ -459,7 +462,7 @@ export default function App() {
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                           <Sparkles className="w-8 h-8 mb-2 mx-auto opacity-20" />
-                          <p className="text-sm font-bold">Start tracking your food and bills today.</p>
+                          <p className="text-sm font-bold">Start tracking your claims and bookkeeping today.</p>
                         </td>
                       </tr>
                     )}
