@@ -7,7 +7,7 @@ import {
 import {
   Search, Download, Trash2, Plus, Edit2, AlertTriangle, Eye,
   PieChart as PieChartIcon, List, Settings, LogOut, Sparkles, Crown, CreditCard,
-  RefreshCw, CheckCircle2, X, Loader2, ShieldAlert, ImageIcon
+  RefreshCw, CheckCircle2, X, Loader2, ShieldAlert, ImageIcon, HelpCircle
 } from 'lucide-react';
 
 import { ExpenseItem, Stats, SortField, SortOrder, ExpenseCategory, BudgetMap, UserProfile } from './types';
@@ -329,6 +329,17 @@ export default function App() {
               </button>
 
               <div className="flex items-center gap-2 border-l pl-4">
+                <button
+                  onClick={() => {
+                    const subject = encodeURIComponent(`Support Request - ${user.email} (${user.id})`);
+                    const body = encodeURIComponent("Please describe your issue or refund request below:\n\n---\nUser Details:\nID: " + user.id + "\nPlan: " + user.planId);
+                    window.location.href = `mailto:arivu.ai.tech@gmail.com?subject=${subject}&body=${body}`;
+                  }}
+                  className="text-slate-500 hover:text-indigo-600 p-2 rounded-xl hover:bg-indigo-50 transition-all"
+                  title="Help & Support"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                </button>
                 {user.stripeCustomerId && (
                   <button onClick={() => stripeService.redirectToCustomerPortal(user.stripeCustomerId!)} className="text-slate-500 hover:text-indigo-600 p-2 rounded-xl hover:bg-indigo-50 transition-all"><CreditCard className="w-5 h-5" /></button>
                 )}
