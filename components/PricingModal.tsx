@@ -23,16 +23,30 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
             const detectGeo = async () => {
                 setIsDetectingGeo(true);
                 try {
+                    // Layer 1: IP-based detection via Cloudflare
                     const response = await fetch('/api/geo');
                     const data = await response.json();
-                    if (data.country === 'MY') {
+
+                    // Layer 2: Timezone-based detection (Very reliable fallback)
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    const isMalaysianTZ = tz === 'Asia/Kuala_Lumpur' || tz === 'Asia/Kuching';
+
+                    console.log("Currency Detection:", { country: data.country, timezone: tz });
+
+                    if (data.country === 'MY' || isMalaysianTZ) {
                         setCurrency('myr');
                     } else {
                         setCurrency('usd');
                     }
                 } catch (err) {
                     console.error("Geo detection failed:", err);
-                    setCurrency('usd'); // Default to USD if detection fails
+                    // Final fallback to TZ even if fetch fails
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    if (tz === 'Asia/Kuala_Lumpur' || tz === 'Asia/Kuching') {
+                        setCurrency('myr');
+                    } else {
+                        setCurrency('usd');
+                    }
                 } finally {
                     setIsDetectingGeo(false);
                 }
