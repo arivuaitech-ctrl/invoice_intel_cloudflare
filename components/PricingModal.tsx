@@ -14,7 +14,11 @@ interface PricingModalProps {
 
 const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
     const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
-    const [currency, setCurrency] = useState<'myr' | 'usd'>('myr');
+    const [currency, setCurrency] = useState<'myr' | 'usd'>(() => {
+        // Instant synchronous detection based on system timezone
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return (tz === 'Asia/Kuala_Lumpur' || tz === 'Asia/Kuching') ? 'myr' : 'usd';
+    });
     const [error, setError] = useState<string | null>(null);
     const [isDetectingGeo, setIsDetectingGeo] = useState(false);
 
@@ -27,26 +31,15 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
                     const response = await fetch('/api/geo');
                     const data = await response.json();
 
-                    // Layer 2: Timezone-based detection (Very reliable fallback)
-                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    const isMalaysianTZ = tz === 'Asia/Kuala_Lumpur' || tz === 'Asia/Kuching';
+                    console.log("IP Detection Result:", data.country);
 
-                    console.log("Currency Detection:", { country: data.country, timezone: tz });
-
-                    if (data.country === 'MY' || isMalaysianTZ) {
+                    if (data.country === 'MY') {
                         setCurrency('myr');
-                    } else {
-                        setCurrency('usd');
                     }
+                    // We don't force 'usd' here if IP says otherwise,
+                    // as the timezone is already a very strong signal for Malaysia.
                 } catch (err) {
-                    console.error("Geo detection failed:", err);
-                    // Final fallback to TZ even if fetch fails
-                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                    if (tz === 'Asia/Kuala_Lumpur' || tz === 'Asia/Kuching') {
-                        setCurrency('myr');
-                    } else {
-                        setCurrency('usd');
-                    }
+                    console.error("IP Geo detection failed:", err);
                 } finally {
                     setIsDetectingGeo(false);
                 }
