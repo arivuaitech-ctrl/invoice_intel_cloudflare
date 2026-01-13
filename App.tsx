@@ -7,7 +7,7 @@ import {
 import {
   Search, Download, Trash2, Plus, Edit2, AlertTriangle, Eye,
   PieChart as PieChartIcon, List, Settings, LogOut, Sparkles, Crown, CreditCard,
-  RefreshCw, CheckCircle2, X, Loader2, ShieldAlert, ImageIcon, HelpCircle
+  RefreshCw, CheckCircle2, X, Loader2, ShieldAlert, ImageIcon, HelpCircle, User
 } from 'lucide-react';
 
 import { ExpenseItem, Stats, SortField, SortOrder, ExpenseCategory, BudgetMap, UserProfile } from './types';
@@ -25,6 +25,7 @@ import BudgetModal from './components/BudgetModal';
 import LoginPage from './components/LoginPage';
 import PricingModal from './components/PricingModal';
 import ImageViewer from './components/ImageViewer';
+import ProfileModal from './components/ProfileModal';
 
 const COLORS = [
   '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -63,6 +64,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ExpenseItem | undefined>(undefined);
   const [viewingImage, setViewingImage] = useState<{ url: string, title: string } | null>(null);
 
@@ -88,6 +90,12 @@ export default function App() {
       }, 3000);
     }
 
+    const handleOpenPricing = () => setIsPricingModalOpen(true);
+    window.addEventListener('open-pricing', handleOpenPricing);
+    return () => window.removeEventListener('open-pricing', handleOpenPricing);
+  }, []);
+
+  useEffect(() => {
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -332,26 +340,27 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-4">
-              <button onClick={() => setIsPricingModalOpen(true)} className={`flex items-center px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-105 active:scale-95 ${badge.color}`}>
+              <button
+                onClick={() => setIsPricingModalOpen(true)}
+                className={`hidden sm:flex items-center px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-105 active:scale-95 ${badge.color}`}
+              >
                 {badge.text}
               </button>
 
               <div className="flex items-center gap-2 border-l pl-4">
                 <button
-                  onClick={() => {
-                    const subject = encodeURIComponent(`Support Request - ${user.email} (${user.id})`);
-                    const body = encodeURIComponent("Please describe your issue below:\n\n---\nUser Details:\nID: " + user.id + "\nPlan: " + user.planId);
-                    window.location.href = `mailto:arivu.ai.tech@gmail.com?subject=${subject}&body=${body}`;
-                  }}
-                  className="text-slate-500 hover:text-indigo-600 p-2 rounded-xl hover:bg-indigo-50 transition-all"
-                  title="Help & Support"
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-slate-100 transition-all group"
+                  title="Your Profile"
                 >
-                  <HelpCircle className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                    <User className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 leading-none mb-1">User Profile</p>
+                    <p className="text-sm font-bold text-slate-700 leading-none">{user.name.split(' ')[0]}</p>
+                  </div>
                 </button>
-                {user.stripeCustomerId && (
-                  <button onClick={() => stripeService.redirectToCustomerPortal(user.stripeCustomerId!)} className="text-slate-500 hover:text-indigo-600 p-2 rounded-xl hover:bg-indigo-50 transition-all"><CreditCard className="w-5 h-5" /></button>
-                )}
-                <button onClick={() => userService.logout().then(() => setUser(null))} className="text-slate-400 hover:text-red-600 p-2 rounded-xl hover:bg-red-50 transition-all" title="Logout"><LogOut className="w-5 h-5" /></button>
               </div>
             </div>
           </div>
@@ -480,6 +489,12 @@ export default function App() {
       <ExpenseModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingItem(undefined); }} onSave={handleSaveExpense} initialData={editingItem} />
       <BudgetModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} budgets={budgets} onSave={handleSaveBudgets} />
       <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} user={user} onSuccess={setUser} />
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        user={user}
+        onLogout={() => userService.logout().then(() => setUser(null))}
+      />
       <ImageViewer
         isOpen={!!viewingImage}
         onClose={() => setViewingImage(null)}
