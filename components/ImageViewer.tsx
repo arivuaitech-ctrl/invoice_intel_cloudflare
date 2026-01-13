@@ -14,8 +14,19 @@ const ImageViewer = ({ isOpen, onClose, imageUrl, title }: ImageViewerProps) => 
 
   useEffect(() => {
     if (isOpen) {
+      console.log(`[ImageViewer] Opening with URL: ${imageUrl ? (imageUrl.substring(0, 50) + '...') : 'NULL'}`);
       setLoading(true);
       setError(false);
+
+      // Timeout safety: if it takes more than 10 seconds, show error/fallback
+      const timer = setTimeout(() => {
+        if (loading) {
+          console.warn('[ImageViewer] Loading timed out after 10s');
+          setError(true);
+          setLoading(false);
+        }
+      }, 10000);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, imageUrl]);
 

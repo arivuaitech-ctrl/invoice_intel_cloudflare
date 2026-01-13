@@ -117,9 +117,14 @@ export const db = {
     return Promise.all(expenses.map(async (exp: ExpenseItem) => {
       try {
         const localData = await localImageStore.get(exp.id);
+        if (localData) {
+          console.log(`[DB] Hydrated image for ${exp.id} (${exp.vendorName})`);
+        } else {
+          console.warn(`[DB] No local image found for ${exp.id}`);
+        }
         return { ...exp, imageData: localData || undefined };
       } catch (err) {
-        console.warn(`Could not load local image for ${exp.id}:`, err);
+        console.error(`[DB] Error loading local image for ${exp.id}:`, err);
         return exp;
       }
     }));

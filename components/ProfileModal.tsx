@@ -3,7 +3,7 @@ import React from 'react';
 import { UserProfile } from '../types';
 import { userService } from '../services/userService';
 import { stripeService } from '../services/stripeService';
-import { X, LogOut, CreditCard, Mail, User, ShieldCheck, Zap, Lock, LifeBuoy } from 'lucide-react';
+import { X, LogOut, CreditCard, Mail, User, ShieldCheck, Zap, Lock, LifeBuoy, ChevronDown, HelpCircle, BookOpen, MapPin, Calculator, Briefcase, Cpu, Globe } from 'lucide-react';
 
 interface ProfileModalProps {
     isOpen: boolean;
@@ -11,6 +11,27 @@ interface ProfileModalProps {
     user: UserProfile;
     onLogout: () => void;
 }
+
+const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+
+    return (
+        <div className="border-b border-indigo-100/30 last:border-0 pb-3 last:pb-0">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center justify-between w-full text-left group"
+            >
+                <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{question}</span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && (
+                <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500 font-medium bg-white/50 p-2 rounded-lg border border-slate-50">
+                    {answer}
+                </p>
+            )}
+        </div>
+    );
+};
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLogout }) => {
     if (!isOpen) return null;
@@ -35,7 +56,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
 
                 <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                <div className="inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full border border-slate-100">
+                <div className="inline-block align-middle bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full border border-slate-100 mb-20 sm:mb-8">
                     <div className="relative">
                         {/* Header Image/Pattern */}
                         <div className="h-32 bg-gradient-to-br from-indigo-600 to-violet-600 relative overflow-hidden">
@@ -143,6 +164,79 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                                     <LogOut className="w-5 h-5" />
                                     Sign Out
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* Use Cases Section */}
+                        <div className="px-8 mt-6">
+                            <div className="p-6 bg-indigo-50/30 rounded-2xl border border-indigo-100/30">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Cpu className="w-4 h-4 text-indigo-500" />
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">From the Creators: ARIVU-AI</h3>
+                                </div>
+                                <div className="mb-6 pb-6 border-b border-indigo-100/30">
+                                    <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                                        <span className="font-bold text-indigo-600">Arivu</span> stands for <span className="italic">Intelligence</span> in Tamil. As part of a team with 15+ years in Data & Insights, ARIVU-AI creates tools to empower Malaysians and global citizens to focus on human creativity rather than repetitive tasks.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-4">
+                                    <BookOpen className="w-4 h-4 text-indigo-500" />
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">How to use Invoice Intel</h3>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="flex gap-4">
+                                        <div className="w-10 h-10 shrink-0 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
+                                            <Briefcase className="w-5 h-5 text-indigo-500" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-800">Professional travel</h4>
+                                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-1">Perfect for professionals who need to group hotel, meal, and transport receipts for company reimbursement.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="w-10 h-10 shrink-0 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
+                                            <Calculator className="w-5 h-5 text-emerald-500" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-800">Tax optimization</h4>
+                                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-1">Keep medical, utility, and house tax receipts organized all year round for seamless tax filing.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="w-10 h-10 shrink-0 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center">
+                                            <MapPin className="w-5 h-5 text-rose-500" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-800">Local tracking</h4>
+                                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-1">Smart currency detection makes it ideal for global exploration or domestic bookkeeping.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* FAQ Section */}
+                        <div className="px-8 mt-6">
+                            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <HelpCircle className="w-4 h-4 text-slate-400" />
+                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Frequently Asked Questions</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    <FAQItem
+                                        question="Where are my images stored?"
+                                        answer="For your total privacy, receipt images are stored ONLY in your local browser. They are never uploaded to our servers, ensuring your sensitive data stays on your device."
+                                    />
+                                    <FAQItem
+                                        question="Why are images missing on other devices?"
+                                        answer="Since images are stored locally, they won't follow you to different browsers or computers. You'll see the expense data, but not the images."
+                                    />
+                                    <FAQItem
+                                        question="How do I cancel my subscription?"
+                                        answer="Click 'Manage Billing' above to be redirected to the secure Stripe portal where you can cancel or change your plan anytime."
+                                    />
+                                </div>
                             </div>
                         </div>
 
