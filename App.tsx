@@ -26,6 +26,8 @@ import LoginPage from './components/LoginPage';
 import PricingModal from './components/PricingModal';
 import ImageViewer from './components/ImageViewer';
 import ProfileModal from './components/ProfileModal';
+import ConsentModal from './components/ConsentModal';
+import LegalModal from './components/LegalModal';
 
 const COLORS = [
   '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -67,6 +69,7 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ExpenseItem | undefined>(undefined);
   const [viewingImage, setViewingImage] = useState<{ url: string, title: string } | null>(null);
+  const [legalModal, setLegalModal] = useState<{ isOpen: boolean, type: 'privacy' | 'terms' }>({ isOpen: false, type: 'privacy' });
 
   const pollIntervalRef = useRef<number | null>(null);
 
@@ -259,6 +262,16 @@ export default function App() {
     db.saveBudgets(newBudgets);
     setBudgets(newBudgets);
   }
+
+  const handleAcceptConsent = async () => {
+    if (!user) return;
+    try {
+      const updatedUser = await userService.updateConsent(user.id);
+      setUser(updatedUser);
+    } catch (err) {
+      console.error("Error updating consent:", err);
+    }
+  };
 
   async function handleDelete(id: string) {
     if (!user) return;
@@ -495,6 +508,19 @@ export default function App() {
         user={user}
         onLogout={() => userService.logout().then(() => setUser(null))}
       />
+      <ConsentModal
+        isOpen={!!user && !user.hasConsented}
+        onAccept={handleAcceptConsent}
+        user={user!}
+        onViewLegal={(type) => setLegalModal({ isOpen: true, type })}
+      />
+
+      <LegalModal
+        isOpen={legalModal.isOpen}
+        type={legalModal.type}
+        onClose={() => setLegalModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
       <ImageViewer
         isOpen={!!viewingImage}
         onClose={() => setViewingImage(null)}
@@ -507,18 +533,18 @@ export default function App() {
             © {new Date().getFullYear()} InvoiceIntel. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <a
-              href="mailto:arivu.ai.tech@gmail.com?subject=Privacy Inquiry"
+            <button
+              onClick={() => setLegalModal({ isOpen: true, type: 'privacy' })}
               className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
             >
               Privacy Policy
-            </a>
-            <a
-              href="mailto:arivu.ai.tech@gmail.com?subject=Terms Inquiry"
+            </button>
+            <button
+              onClick={() => setLegalModal({ isOpen: true, type: 'terms' })}
               className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors"
             >
               Terms of Service
-            </a>
+            </button>
           </div>
         </div>
       </footer>

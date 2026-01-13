@@ -59,6 +59,10 @@ export interface UserProfile {
   isTrialActive: boolean;
   stripeCustomerId?: string; // Added to handle portal redirects
   isAdmin?: boolean; // New: admin bypass
+  hasConsented?: boolean; // New: informed consent tracking
+  consentTimestamp?: number | null; // New: when they consented
+  consentVersion?: string; // New: version of terms accepted
+  consentIp?: string; // New: IP address at consent
 }
 
 export interface PricingTier {

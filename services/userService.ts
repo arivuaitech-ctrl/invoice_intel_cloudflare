@@ -47,10 +47,29 @@ const mapProfile = (data: any): UserProfile => ({
   trialStartDate: data.trial_start_date,
   isTrialActive: data.is_trial_active,
   stripeCustomerId: data.stripe_customer_id,
-  isAdmin: !!data.is_admin
+  isAdmin: !!data.is_admin,
+  hasConsented: !!data.has_consented,
+  consentTimestamp: data.consent_timestamp,
+  consentVersion: data.consent_version,
+  consentIp: data.consent_ip
 });
 
 export const userService = {
+  updateConsent: async (userId: string, version: string = '1.0'): Promise<UserProfile> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        has_consented: true,
+        consent_timestamp: Date.now(),
+        consent_version: version
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return mapProfile(data);
+  },
   getProfile: async (userId: string): Promise<UserProfile | null> => {
     try {
       const { data, error } = await supabase
