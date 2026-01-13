@@ -14,10 +14,17 @@ interface PricingModalProps {
 
 const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
     const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
-    const [currency, setCurrency] = useState<'myr' | 'usd'>(() => {
-        // Instant synchronous detection based on system timezone
+    const [isMalaysiaDetected, setIsMalaysiaDetected] = useState<boolean>(() => {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        return (tz === 'Asia/Kuala_Lumpur' || tz === 'Asia/Kuching') ? 'myr' : 'usd';
+        const lang = navigator.language.toLowerCase();
+        const offset = new Date().getTimezoneOffset(); // Malaysia is GMT+8 (-480)
+        return tz.includes('Kuala_Lumpur') || tz.includes('Kuching') || lang.includes('my') || offset === -480;
+    });
+    const [currency, setCurrency] = useState<'myr' | 'usd'>(() => {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const lang = navigator.language.toLowerCase();
+        const offset = new Date().getTimezoneOffset();
+        return (tz.includes('Kuala_Lumpur') || tz.includes('Kuching') || lang.includes('my') || offset === -480) ? 'myr' : 'usd';
     });
     const [error, setError] = useState<string | null>(null);
     const [isDetectingGeo, setIsDetectingGeo] = useState(false);
@@ -27,17 +34,15 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
             const detectGeo = async () => {
                 setIsDetectingGeo(true);
                 try {
-                    // Layer 1: IP-based detection via Cloudflare
                     const response = await fetch('/api/geo');
                     const data = await response.json();
 
                     console.log("IP Detection Result:", data.country);
 
                     if (data.country === 'MY') {
+                        setIsMalaysiaDetected(true);
                         setCurrency('myr');
                     }
-                    // We don't force 'usd' here if IP says otherwise,
-                    // as the timezone is already a very strong signal for Malaysia.
                 } catch (err) {
                     console.error("IP Geo detection failed:", err);
                 } finally {
@@ -90,18 +95,30 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
                             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Simple Pricing, No Hidden Fees</h2>
                             <p className="mt-3 text-lg text-slate-500 max-w-2xl mx-auto">Track your expenses like a pro with AI-powered data extraction and advanced analytics.</p>
 
-                            {/* Currency Toggle */}
-                            <div className="mt-8 flex items-center justify-center gap-4">
-                                <span className={`text-xs font-black uppercase tracking-widest ${currency === 'myr' ? 'text-indigo-600' : 'text-slate-400'}`}>Malaysia (RM)</span>
-                                <button
-                                    onClick={() => setCurrency(currency === 'myr' ? 'usd' : 'myr')}
-                                    className="relative w-14 h-7 bg-slate-200 rounded-full p-1 transition-colors hover:bg-slate-300"
-                                >
-                                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${currency === 'usd' ? 'translate-x-7' : 'translate-x-0'}`} />
-                                </button>
-                                <span className={`text-xs font-black uppercase tracking-widest ${currency === 'usd' ? 'text-indigo-600' : 'text-slate-400'}`}>International (USD)</span>
-                            </div>
-                            {isDetectingGeo && <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-2 animate-pulse">Detecting local currency...</p>}
+                            {/* Currency Toggle - Only show if Malaysia is NOT detected to avoid confusion */}
+                            {!isMalaysiaDetected ? (
+                                <div className="mt-8 flex items-center justify-center gap-4">
+                                    <span className={`text-xs font-black uppercase tracking-widest ${currency === 'myr' ? 'text-indigo-600' : 'text-slate-400'}`}>Malaysia (RM)</span>
+                                    <button
+                                        onClick={() => setCurrency(currency === 'myr' ? 'usd' : 'myr')}
+                                        className="relative w-14 h-7 bg-slate-200 rounded-full p-1 transition-colors hover:bg-slate-300"
+                                    >
+                                        <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${currency === 'usd' ? 'translate-x-7' : 'translate-x-0'}`} />
+                                    </button>
+                                    <span className={`text-xs font-black uppercase tracking-widest ${currency === 'usd' ? 'text-indigo-600' : 'text-slate-400'}`}>International (USD)</span>
+                                </div>
+                            ) : (
+                                <div className="mt-8">
+                                    <span className="text-indigo-600 font-black text-xs uppercase tracking-widest px-4 py-2 bg-indigo-50 rounded-lg">
+                                        Localized Pricing (MYR)
+                                    </span>
+                                </div>
+                            )}
+                            {isDetectingGeo && !isMalaysiaDetected && (
+                                <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-2 animate-pulse">
+                                    Optimizing for your region...
+                                </p>
+                            )}
                         </div>
 
                         {error && (
