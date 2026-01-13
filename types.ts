@@ -66,6 +66,7 @@ export interface PricingTier {
   name: string;
   limit: number;
   price: number; // in MYR
+  priceUSD: number; // in USD
   description: string;
   features: string[];
   popular?: boolean;

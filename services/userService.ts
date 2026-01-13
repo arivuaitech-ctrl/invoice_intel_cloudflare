@@ -8,6 +8,7 @@ export const PRICING_PACKAGES: PricingTier[] = [
     name: 'Personal (Basic)',
     limit: 30,
     price: 15.90,
+    priceUSD: 3.9348,
     description: 'For individuals managing monthly bills.',
     features: ['30 Receipts / Month', 'Standard Processing', 'Excel Export'],
     popular: false
@@ -17,6 +18,7 @@ export const PRICING_PACKAGES: PricingTier[] = [
     name: 'Freelancer (Pro)',
     limit: 100,
     price: 39.90,
+    priceUSD: 9.8371,
     description: 'For agents, freelancers & power users.',
     features: ['100 Receipts / Month', 'Priority AI Processing', 'Spending Analytics'],
     popular: true
@@ -26,6 +28,7 @@ export const PRICING_PACKAGES: PricingTier[] = [
     name: 'SME (Business)',
     limit: 500,
     price: 89.90,
+    priceUSD: 22.1334,
     description: 'For small businesses and teams.',
     features: ['500 Receipts / Month', 'High-Speed Bulk Upload', 'Priority Support'],
     popular: false

@@ -14,6 +14,7 @@ interface PricingModalProps {
 
 const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSuccess }) => {
     const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
+    const [currency, setCurrency] = useState<'myr' | 'usd'>('myr');
     const [error, setError] = useState<string | null>(null);
 
     if (!isOpen) return null;
@@ -22,7 +23,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
         setLoadingPkg(pkgId);
         setError(null);
         try {
-            await stripeService.redirectToCheckout(user, pkgId);
+            await stripeService.redirectToCheckout(user, pkgId, currency);
             // Browser will redirect to Stripe, so no need to close
         } catch (err: any) {
             console.error("Payment redirect error:", err);
@@ -57,6 +58,18 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
                             </div>
                             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">Simple Pricing, No Hidden Fees</h2>
                             <p className="mt-3 text-lg text-slate-500 max-w-2xl mx-auto">Track your expenses like a pro with AI-powered data extraction and advanced analytics.</p>
+
+                            {/* Currency Toggle */}
+                            <div className="mt-8 flex items-center justify-center gap-4">
+                                <span className={`text-xs font-black uppercase tracking-widest ${currency === 'myr' ? 'text-indigo-600' : 'text-slate-400'}`}>Malaysia (RM)</span>
+                                <button
+                                    onClick={() => setCurrency(currency === 'myr' ? 'usd' : 'myr')}
+                                    className="relative w-14 h-7 bg-slate-200 rounded-full p-1 transition-colors hover:bg-slate-300"
+                                >
+                                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${currency === 'usd' ? 'translate-x-7' : 'translate-x-0'}`} />
+                                </button>
+                                <span className={`text-xs font-black uppercase tracking-widest ${currency === 'usd' ? 'text-indigo-600' : 'text-slate-400'}`}>International (USD)</span>
+                            </div>
                         </div>
 
                         {error && (
@@ -86,8 +99,10 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
                                         <p className="text-sm text-slate-500 mt-2 leading-relaxed">{pkg.description}</p>
                                     </div>
                                     <div className="mb-8 flex items-baseline">
-                                        <span className="text-sm font-bold text-slate-400 mr-1.5">RM</span>
-                                        <span className="text-5xl font-black text-slate-900 tracking-tight">{pkg.price.toFixed(0)}</span>
+                                        <span className="text-sm font-bold text-slate-400 mr-1.5">{currency.toUpperCase()}</span>
+                                        <span className="text-5xl font-black text-slate-900 tracking-tight">
+                                            {currency === 'myr' ? pkg.price.toFixed(2) : pkg.priceUSD.toFixed(4)}
+                                        </span>
                                         <span className="text-slate-400 font-medium ml-1.5">/month</span>
                                     </div>
 

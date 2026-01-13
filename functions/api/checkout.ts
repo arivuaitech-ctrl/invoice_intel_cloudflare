@@ -18,7 +18,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
   try {
     const body: any = await context.request.json();
-    const { priceId, userId, userEmail } = body;
+    const { priceId, userId, userEmail, currency = 'myr' } = body;
 
     const priceMap: Record<string, string | undefined> = {
       'basic': context.env.STRIPE_PRICE_ID_BASIC,
@@ -40,7 +40,11 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [{ price: stripePriceId, quantity: 1 }],
+      line_items: [{
+        price: stripePriceId,
+        quantity: 1
+      }],
+      currency: currency.toLowerCase(), // Important: Specify currency for multi-currency prices
       mode: 'subscription',
       success_url: `${cleanBaseUrl}/?session_id={CHECKOUT_SESSION_ID}&payment=success`,
       cancel_url: `${cleanBaseUrl}/?payment=cancelled`,
