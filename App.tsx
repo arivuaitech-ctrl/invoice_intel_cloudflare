@@ -443,7 +443,10 @@ export default function App() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {expense.imageData ? (
                             <div
-                              onClick={() => setViewingImage({ url: expense.imageData!, title: expense.vendorName })}
+                              onClick={() => {
+                                console.log(`[App] Opening image for ${expense.vendorName}. Has data: ${!!expense.imageData}`);
+                                setViewingImage({ url: expense.imageData!, title: expense.vendorName });
+                              }}
                               className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden cursor-pointer hover:ring-2 ring-indigo-500 transition-all flex items-center justify-center"
                             >
                               {expense.imageData.startsWith('data:application/pdf') ? (

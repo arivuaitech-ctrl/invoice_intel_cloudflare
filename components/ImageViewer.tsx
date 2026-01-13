@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { X, Download, FileText, AlertCircle, Loader2, ImageIcon } from 'lucide-react';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Download, AlertCircle, Loader2 } from 'lucide-react';
 
 interface ImageViewerProps {
   isOpen: boolean;
@@ -11,120 +12,185 @@ interface ImageViewerProps {
 const ImageViewer = ({ isOpen, onClose, imageUrl, title }: ImageViewerProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [safeUrl, setSafeUrl] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      console.log(`[ImageViewer] Opening with URL: ${imageUrl ? (imageUrl.substring(0, 50) + '...') : 'NULL'}`);
+    if (isOpen && imageUrl) {
+      console.log(`[ImageViewer] Opening. Original URL length: ${imageUrl.length}`);
       setLoading(true);
       setError(false);
 
-      // Timeout safety: if it takes more than 10 seconds, show error/fallback
+      let objectUrl: string | null = null;
+
+      // Optimization: Convert Data URL to Blob URL for more efficient browser rendering
+      if (imageUrl.startsWith('data:')) {
+        try {
+          const parts = imageUrl.split(',');
+          const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+          const bstr = atob(parts[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          const blob = new Blob([u8arr], { type: mime });
+          objectUrl = URL.createObjectURL(blob);
+          setSafeUrl(objectUrl);
+          console.log(`[ImageViewer] Created Blob URL: ${objectUrl}`);
+        } catch (e) {
+          console.error('[ImageViewer] Error creating blob URL, falling back to original:', e);
+          setSafeUrl(imageUrl);
+        }
+      } else {
+        setSafeUrl(imageUrl);
+      }
+
+      // Safety timeout
       const timer = setTimeout(() => {
-        if (loading) {
+        // Double check if image is actually loaded but onLoad didn't fire
+        if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+          console.log('[ImageViewer] Image detected as complete via Ref after timeout');
+          setLoading(false);
+          return;
+        }
+
+        if (loading && !error) {
           console.warn('[ImageViewer] Loading timed out after 10s');
           setError(true);
           setLoading(false);
         }
       }, 10000);
-      return () => clearTimeout(timer);
+
+      return () => {
+        if (objectUrl) {
+          console.log(`[ImageViewer] Revoking Blob URL: ${objectUrl}`);
+          URL.revokeObjectURL(objectUrl);
+        }
+        clearTimeout(timer);
+      };
+    } else {
+      setSafeUrl(null);
     }
   }, [isOpen, imageUrl]);
+
+  // Early check if image is already complete (for cached images)
+  useEffect(() => {
+    if (safeUrl && imgRef.current?.complete && loading) {
+      console.log('[ImageViewer] Image already complete on render');
+      setLoading(false);
+    }
+  }, [safeUrl]);
 
   if (!isOpen || !imageUrl) return null;
 
   const isPdf = imageUrl.toLowerCase().startsWith('data:application/pdf');
 
+  const handleDownload = () => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `receipt-${title.toLowerCase().replace(/\s+/g, '-')}.${isPdf ? 'pdf' : 'jpg'}`;
+    link.click();
+  };
+
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-
-        {/* Backdrop */}
-        <div
-          className="fixed inset-0 bg-slate-900/95 transition-opacity backdrop-blur-md"
-          aria-hidden="true"
-          onClick={onClose}
-        ></div>
-
-        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-        <div className="inline-block align-middle bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-4xl w-full border border-slate-200 flex flex-col max-h-[90vh]">
-          {/* Header */}
-          <div className="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/10">
-            <div className="flex items-center gap-3 truncate max-w-[70%]">
-              <div className="p-2 bg-indigo-500/20 rounded-lg">
-                {isPdf ? <FileText className="w-5 h-5 text-indigo-400" /> : <ImageIcon className="w-5 h-5 text-indigo-400" />}
-              </div>
-              <div>
-                <h3 className="text-white text-sm font-bold truncate">{title}</h3>
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest leading-none mt-1">Receipt Viewer</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <a
-                href={imageUrl}
-                download={`receipt-${title.replace(/\s+/g, '_')}.${isPdf ? 'pdf' : 'png'}`}
-                className="bg-white/5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl p-2.5 transition-all active:scale-95"
-                onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                title="Download"
-              >
-                <Download className="w-5 h-5" />
-              </a>
-              <button
-                onClick={onClose}
-                className="bg-white/5 text-slate-300 hover:text-white hover:bg-white/20 rounded-xl p-2.5 transition-all active:scale-95"
-                title="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 transition-all animate-in fade-in duration-300">
+      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col items-center">
+        {/* Header */}
+        <div className="absolute -top-14 left-0 right-0 flex justify-between items-center text-white/90 px-4 py-2">
+          <div className="flex flex-col">
+            <h3 className="text-sm font-black tracking-tight uppercase">{title}</h3>
+            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Secure Local View</p>
           </div>
+          <div className="flex gap-4">
+            <button
+              onClick={handleDownload}
+              className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 hover:border-white/10"
+              title="Download"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 hover:border-white/10"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-          {/* Content Area */}
-          <div className="relative w-full flex-1 bg-slate-50 flex items-center justify-center p-6 overflow-auto min-h-[60vh]">
-            {loading && !error && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50 z-10">
-                <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading sensitive data...</p>
+        {/* Display Area */}
+        <div className="w-full h-full min-h-[400px] flex items-center justify-center relative overflow-hidden rounded-[2rem] bg-slate-900 border border-white/10 shadow-2xl">
+          {loading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50 bg-slate-900 z-50">
+              <Loader2 className="w-10 h-10 animate-spin mb-4 text-indigo-500" />
+              <div className="text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Opening Receipt</p>
+                <p className="text-[9px] font-bold text-slate-500 mt-1 uppercase tracking-widest">Hydrating from locally stored data...</p>
               </div>
-            )}
+            </div>
+          )}
 
-            {error && (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-                  <AlertCircle className="w-8 h-8 text-red-500" />
-                </div>
-                <h4 className="text-lg font-bold text-slate-900">Unable to display image</h4>
-                <p className="text-sm text-slate-500 mt-2 max-w-xs">This might be due to local privacy restrictions or an invalid file format.</p>
-                <a
-                  href={imageUrl}
-                  download={`receipt-${title}.${isPdf ? 'pdf' : 'png'}`}
-                  className="mt-6 px-6 py-2 bg-indigo-600 text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-indigo-700 transition-colors"
+          {error && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12 text-white bg-slate-900 z-50">
+              <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center mb-6 border border-rose-500/20">
+                <AlertCircle className="w-10 h-10 text-rose-500" />
+              </div>
+              <h4 className="text-xl font-black mb-3">Silent Rendering Failure</h4>
+              <p className="text-sm text-slate-400 max-w-sm mb-8 font-medium leading-relaxed">
+                Your browser is struggling to render this image locally, likely due to high resolution or strict memory limits.
+                <br /><span className="text-indigo-400 mt-2 block">Don't worry, your data is safe.</span>
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={handleDownload}
+                  className="px-8 py-3 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/10"
                 >
-                  Download Original
-                </a>
+                  <Download className="w-5 h-5" />
+                  Download to View
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-8 py-3 bg-slate-800 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-700 transition-all border border-white/5"
+                >
+                  Cancel
+                </button>
               </div>
-            )}
+            </div>
+          )}
 
-            {isPdf ? (
+          {safeUrl && (
+            isPdf ? (
               <iframe
-                src={imageUrl}
-                className={`w-full h-[75vh] border-0 bg-white rounded-xl shadow-lg transition-opacity duration-300 ${loading ? 'opacity-0' : 'opacity-100'}`}
+                ref={iframeRef}
+                src={safeUrl}
+                className={`w-full h-[75vh] border-0 bg-white shadow-inner transition-all duration-500 ${loading ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}
+                onLoad={() => {
+                  console.log('[ImageViewer] PDF Load success');
+                  setLoading(false);
+                }}
                 title="PDF Viewer"
-                onLoad={() => setLoading(false)}
-                onError={() => { setError(true); setLoading(false); }}
               />
             ) : (
-              <div className={`flex items-center justify-center w-full h-full transition-opacity duration-300 ${loading ? 'opacity-0' : 'opacity-100'}`}>
-                <img
-                  src={imageUrl}
-                  alt="Receipt"
-                  className="max-w-full max-h-[75vh] object-contain shadow-2xl rounded-lg bg-white"
-                  onLoad={() => setLoading(false)}
-                  onError={() => { setError(true); setLoading(false); }}
-                />
-              </div>
-            )}
-          </div>
+              <img
+                ref={imgRef}
+                src={safeUrl}
+                alt="Receipt"
+                className={`max-w-full max-h-[75vh] object-contain transition-all duration-500 ${loading ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}
+                onLoad={() => {
+                  console.log('[ImageViewer] Image Load success');
+                  setLoading(false);
+                }}
+                onError={(e) => {
+                  console.error('[ImageViewer] Image Load error event triggered', e);
+                  setError(true);
+                  setLoading(false);
+                }}
+              />
+            )
+          )}
         </div>
       </div>
     </div>

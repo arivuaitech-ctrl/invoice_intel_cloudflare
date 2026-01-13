@@ -148,8 +148,8 @@ export const db = {
   },
 
   update: async (updatedItem: ExpenseItem, userId: string): Promise<void> => {
-    // 1. Update sensitive image data locally
     if (updatedItem.imageData) {
+      console.log(`[DB] Saving new/updated image for ${updatedItem.id}`);
       await localImageStore.save(updatedItem.id, updatedItem.imageData);
     }
 
