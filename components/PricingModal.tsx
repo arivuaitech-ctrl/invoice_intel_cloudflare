@@ -16,6 +16,30 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
     const [loadingPkg, setLoadingPkg] = useState<string | null>(null);
     const [currency, setCurrency] = useState<'myr' | 'usd'>('myr');
     const [error, setError] = useState<string | null>(null);
+    const [isDetectingGeo, setIsDetectingGeo] = useState(false);
+
+    React.useEffect(() => {
+        if (isOpen) {
+            const detectGeo = async () => {
+                setIsDetectingGeo(true);
+                try {
+                    const response = await fetch('/api/geo');
+                    const data = await response.json();
+                    if (data.country === 'MY') {
+                        setCurrency('myr');
+                    } else {
+                        setCurrency('usd');
+                    }
+                } catch (err) {
+                    console.error("Geo detection failed:", err);
+                    setCurrency('usd'); // Default to USD if detection fails
+                } finally {
+                    setIsDetectingGeo(false);
+                }
+            };
+            detectGeo();
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -70,6 +94,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
                                 </button>
                                 <span className={`text-xs font-black uppercase tracking-widest ${currency === 'usd' ? 'text-indigo-600' : 'text-slate-400'}`}>International (USD)</span>
                             </div>
+                            {isDetectingGeo && <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-2 animate-pulse">Detecting local currency...</p>}
                         </div>
 
                         {error && (
@@ -101,7 +126,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, user, onSu
                                     <div className="mb-8 flex items-baseline">
                                         <span className="text-sm font-bold text-slate-400 mr-1.5">{currency.toUpperCase()}</span>
                                         <span className="text-5xl font-black text-slate-900 tracking-tight">
-                                            {currency === 'myr' ? pkg.price.toFixed(2) : pkg.priceUSD.toFixed(4)}
+                                            {currency === 'myr' ? pkg.price.toFixed(2) : pkg.priceUSD.toFixed(2)}
                                         </span>
                                         <span className="text-slate-400 font-medium ml-1.5">/month</span>
                                     </div>
