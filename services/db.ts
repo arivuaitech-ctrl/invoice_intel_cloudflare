@@ -2,6 +2,68 @@
 import { ExpenseItem, BudgetMap, ExpenseCategory } from '../types';
 import { supabase } from './supabaseClient';
 
+
+// Local Image Storage (IndexedDB) for PDPA Compliance
+const DB_NAME = 'InvoiceIntelLocal';
+const STORE_NAME = 'receipt_images';
+
+const getLocalDb = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const localImageStore = {
+  save: async (id: string, data: string): Promise<void> => {
+    const db = await getLocalDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(data, id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  },
+  get: async (id: string): Promise<string | null> => {
+    const db = await getLocalDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  },
+  delete: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  },
+  clear: async (): Promise<void> => {
+    const db = await getLocalDb();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+};
+
 const mapToDb = (item: ExpenseItem, userId?: string) => {
   const data: any = {
     id: item.id,
@@ -12,7 +74,7 @@ const mapToDb = (item: ExpenseItem, userId?: string) => {
     category: item.category,
     summary: item.summary,
     file_name: item.fileName,
-    image_data: item.imageData,
+    // image_data: item.imageData, // REMOVED FOR PDPA COMPLIANCE
     created_at: item.createdAt
   };
 
@@ -32,7 +94,7 @@ const mapFromDb = (data: any): ExpenseItem => ({
   category: data.category as ExpenseCategory,
   summary: data.summary || '',
   fileName: data.file_name,
-  imageData: data.image_data,
+  imageData: undefined, // Will be hydrated from local storage
   createdAt: data.created_at
 });
 
@@ -48,10 +110,28 @@ export const db = {
       console.error("Error fetching expenses:", error);
       return [];
     }
-    return (data || []).map(mapFromDb);
+
+    const expenses = (data || []).map(mapFromDb);
+
+    // Hydrate images from local storage
+    return Promise.all(expenses.map(async (exp: ExpenseItem) => {
+      try {
+        const localData = await localImageStore.get(exp.id);
+        return { ...exp, imageData: localData || undefined };
+      } catch (err) {
+        console.warn(`Could not load local image for ${exp.id}:`, err);
+        return exp;
+      }
+    }));
   },
 
   add: async (item: ExpenseItem, userId: string): Promise<void> => {
+    // 1. Save sensitive image data locally
+    if (item.imageData) {
+      await localImageStore.save(item.id, item.imageData);
+    }
+
+    // 2. Save metadata to Supabase (without image data)
     const { error } = await supabase
       .from('expenses')
       .insert([mapToDb(item, userId)]);
@@ -63,12 +143,18 @@ export const db = {
   },
 
   update: async (updatedItem: ExpenseItem, userId: string): Promise<void> => {
+    // 1. Update sensitive image data locally
+    if (updatedItem.imageData) {
+      await localImageStore.save(updatedItem.id, updatedItem.imageData);
+    }
+
+    // 2. Update metadata in Supabase
     const payload = mapToDb(updatedItem);
     delete payload.id;
     delete payload.user_id;
     delete payload.created_at;
 
-    const { data, error, status } = await supabase
+    const { data, error } = await supabase
       .from('expenses')
       .update(payload)
       .eq('id', updatedItem.id)
@@ -79,14 +165,14 @@ export const db = {
       console.error("Supabase Update Error:", error);
       throw error;
     }
-
-    if (!data || data.length === 0) {
-      console.warn("Update succeeded but 0 rows affected. Check RLS Policies in Supabase.");
-    }
   },
 
   delete: async (id: string, userId: string): Promise<void> => {
-    const { error, status, count } = await supabase
+    // 1. Delete local image
+    await localImageStore.delete(id);
+
+    // 2. Delete metadata from Supabase
+    const { error, count } = await supabase
       .from('expenses')
       .delete({ count: 'exact' })
       .eq('id', id)
@@ -96,13 +182,13 @@ export const db = {
       console.error("Supabase Delete Error:", error);
       throw error;
     }
-
-    if (count === 0) {
-      console.warn("Delete succeeded but 0 rows removed. Check if user_id matches.");
-    }
   },
 
   clearAll: async (userId: string): Promise<void> => {
+    // 1. Clear local storage
+    await localImageStore.clear();
+
+    // 2. Clear cloud storage
     const { error } = await supabase
       .from('expenses')
       .delete()
@@ -115,7 +201,6 @@ export const db = {
     const data = localStorage.getItem('invoice_intel_budgets_v1');
     if (data) return JSON.parse(data);
 
-    // Fix: Correctly initialize all required categories for the BudgetMap type (Record<ExpenseCategory, number>)
     return {
       [ExpenseCategory.FOOD]: 0,
       [ExpenseCategory.PARKING]: 0,
