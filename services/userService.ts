@@ -129,7 +129,27 @@ export const userService = {
       .eq('id', authUser.id)
       .single();
 
-    if (existing) return userService.refreshUserStatus(mapProfile(existing));
+    if (existing) {
+      const profile = mapProfile(existing);
+
+      // FIX: If profile exists but trial was never properly initialized (limit 0 or no date)
+      if (profile.planId === 'free' && (profile.monthlyDocsLimit === 0 || !profile.trialStartDate)) {
+        console.log(`[UserService] Repairing hollow profile for ${profile.email}`);
+        const repaired = {
+          monthly_docs_limit: 10,
+          trial_start_date: Date.now(),
+          is_trial_active: true
+        };
+        const { data: updated } = await supabase
+          .from('profiles')
+          .update(repaired)
+          .eq('id', profile.id)
+          .select()
+          .single();
+        if (updated) return userService.refreshUserStatus(mapProfile(updated));
+      }
+      return userService.refreshUserStatus(profile);
+    }
 
     const newProfile = {
       id: authUser.id,
@@ -151,7 +171,7 @@ export const userService = {
       .single();
 
     if (error) throw error;
-    return mapProfile(data);
+    return userService.refreshUserStatus(mapProfile(data));
   },
 
   refreshUserStatus: (user: UserProfile): UserProfile => {
@@ -160,7 +180,14 @@ export const userService = {
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
     // Safety check: trial logic
-    const isTrialExpired = (now - user.trialStartDate) > SEVEN_DAYS_MS;
+    // If trialStartDate is 0 or missing, it's a new or broken user - initialize it
+    if (updated.planId === 'free' && (!updated.trialStartDate || updated.trialStartDate === 0)) {
+      updated.trialStartDate = now;
+      updated.isTrialActive = true;
+      if (updated.monthlyDocsLimit === 0) updated.monthlyDocsLimit = 10;
+    }
+
+    const isTrialExpired = (now - updated.trialStartDate) > SEVEN_DAYS_MS;
 
     if (updated.planId === 'free') {
       updated.isTrialActive = !isTrialExpired && !updated.isAdmin;
