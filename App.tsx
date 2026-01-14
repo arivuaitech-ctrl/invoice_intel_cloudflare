@@ -302,7 +302,7 @@ export default function App() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="flex flex-col items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-        <p className="text-slate-500 text-sm font-medium animate-pulse">Initializing InvoiceIntel: Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals...</p>
+        <p className="text-slate-500 text-sm font-medium animate-pulse">Initializing InvoiceIntel: Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals and Individuals...</p>
       </div>
     </div>
   );
@@ -343,7 +343,7 @@ export default function App() {
               </div>
               <div className="ml-2">
                 <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">InvoiceIntel</h1>
-                <p className="text-[10px] text-slate-400 font-bold hidden md:block">Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals</p>
+                <p className="text-[10px] text-slate-400 font-bold hidden md:block">Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals and Individuals</p>
               </div>
             </div>
 

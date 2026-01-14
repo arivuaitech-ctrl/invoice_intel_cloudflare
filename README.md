@@ -1,6 +1,6 @@
-# InvoiceIntel - AI Expense Tracker
+# InvoiceIntel
 
-Smart expense tracking for professionals. Uses Google Gemini AI to extract data from invoices and receipts.
+Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals and Individuals. Uses Google Gemini AI to extract data from invoices and receipts.
 
 ## Getting Started
 
