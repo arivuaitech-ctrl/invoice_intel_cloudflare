@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "invoice_intel_cloudflare",
+			"path": "."
+		},
+		{
+			"name": "InvoiceIntelMobile",
+			"path": "../../invoice_intel_cloudflare_mobile/InvoiceIntelMobile"
+		}
+	],
+	"settings": {}
+}
