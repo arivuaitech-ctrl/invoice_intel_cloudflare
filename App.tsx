@@ -51,7 +51,7 @@ const formatDate = (rawDate: string) => {
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [budgets, setBudgets] = useState<MultiScopeBudget>({ global: {} as BudgetMap, portfolios: {} });
+  const [budgets, setBudgets] = useState<MultiScopeBudget>({ profiles: [], assignments: {} });
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');

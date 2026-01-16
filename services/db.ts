@@ -1,5 +1,5 @@
 
-import { ExpenseItem, BudgetMap, MultiScopeBudget, ExpenseCategory, Portfolio } from '../types';
+import { ExpenseItem, BudgetMap, MultiScopeBudget, BudgetProfile, ExpenseCategory, Portfolio } from '../types';
 import { supabase } from './supabaseClient';
 
 
@@ -277,11 +277,10 @@ export const db = {
   },
 
   getBudgets: (): MultiScopeBudget => {
-    const data = localStorage.getItem('invoice_intel_budgets_v2');
+    const data = localStorage.getItem('invoice_intel_budgets_v3');
     if (data) return JSON.parse(data);
 
-    // Migration from v1
-    const v1Data = localStorage.getItem('invoice_intel_budgets_v1');
+    // Default Map for fallback
     const defaultMap = {
       [ExpenseCategory.FOOD]: 0,
       [ExpenseCategory.PARKING]: 0,
@@ -300,15 +299,32 @@ export const db = {
       [ExpenseCategory.OTHERS]: 0,
     };
 
-    const initialBudgets: MultiScopeBudget = {
-      global: v1Data ? JSON.parse(v1Data) : { ...defaultMap },
-      portfolios: {}
-    };
+    // Migration from v2
+    const v2Data = localStorage.getItem('invoice_intel_budgets_v2');
+    if (v2Data) {
+      const v2 = JSON.parse(v2Data);
+      const profiles: BudgetProfile[] = [
+        { id: 'global', name: 'Global Default', map: v2.global }
+      ];
+      const assignments: Record<string, string> = {};
 
-    return initialBudgets;
+      Object.entries(v2.portfolios || {}).forEach(([pId, map]) => {
+        const profId = `prof_${pId}`;
+        profiles.push({ id: profId, name: `Portfolio Budget`, map: map as BudgetMap });
+        assignments[pId] = profId;
+      });
+
+      return { profiles, assignments };
+    }
+
+    // Default Initial State
+    return {
+      profiles: [{ id: 'global', name: 'Global Default', map: defaultMap }],
+      assignments: {}
+    };
   },
 
   saveBudgets: (budgets: MultiScopeBudget): void => {
-    localStorage.setItem('invoice_intel_budgets_v2', JSON.stringify(budgets));
+    localStorage.setItem('invoice_intel_budgets_v3', JSON.stringify(budgets));
   }
 };
