@@ -192,12 +192,13 @@ export default function App() {
   }
 
   function checkBudgetWarning(category: ExpenseCategory, amount: number) {
-    // 1. Determine active budget map (Portfolio-specific > Global)
-    const activeBudgetMap = (activePortfolioId && budgets.portfolios[activePortfolioId])
-      ? budgets.portfolios[activePortfolioId]
-      : budgets.global;
+    // 1. Determine active profile
+    const profileId = activePortfolioId ? (budgets.assignments[activePortfolioId] || 'global') : 'global';
+    const profile = budgets.profiles.find(p => p.id === profileId) || budgets.profiles.find(p => p.id === 'global');
 
-    const limit = activeBudgetMap[category];
+    if (!profile) return;
+
+    const limit = profile.map[category];
     if (limit && limit > 0) {
       const currentTotal = expenses
         .filter(e => e.category === category && (e.portfolioId === activePortfolioId || (!e.portfolioId && portfolios[0]?.id === activePortfolioId)))
@@ -205,7 +206,7 @@ export default function App() {
 
       if (currentTotal + amount > limit) {
         setTimeout(() => {
-          alert(`⚠️ Budget Alert: Spending on ${category} exceeds your RM ${limit} limit in ${activePortfolioId && activePortfolioId !== portfolios[0]?.id ? 'this page' : 'General'}.`);
+          alert(`⚠️ Budget Alert: Spending on ${category} exceeds your RM ${limit} limit in ${activePortfolioId && activePortfolioId !== portfolios[0]?.id ? 'this page' : 'General'} (using ${profile.name} budget).`);
         }, 500);
       }
     }
@@ -633,7 +634,11 @@ export default function App() {
         ) : (
           <AnalyticsView
             expenses={filteredExpenses}
-            budgets={(activePortfolioId && budgets.portfolios[activePortfolioId]) ? budgets.portfolios[activePortfolioId] : budgets.global}
+            budgets={(() => {
+              const pId = activePortfolioId ? (budgets.assignments[activePortfolioId] || 'global') : 'global';
+              const profile = budgets.profiles.find(p => p.id === pId) || budgets.profiles.find(p => p.id === 'global');
+              return profile?.map || {} as BudgetMap;
+            })()}
           />
         )}
       </main>
