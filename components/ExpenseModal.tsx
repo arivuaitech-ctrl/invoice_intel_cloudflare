@@ -10,6 +10,7 @@ interface ExpenseModalProps {
   initialData?: ExpenseItem;
   portfolios?: Portfolio[];
   defaultPortfolioId?: string | null;
+  defaultCurrency?: string;
 }
 
 const ExpenseModal: React.FC<ExpenseModalProps> = ({
@@ -18,13 +19,14 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   onSave,
   initialData,
   portfolios = [],
-  defaultPortfolioId
+  defaultPortfolioId,
+  defaultCurrency = 'USD'
 }: ExpenseModalProps) => {
   const [formData, setFormData] = useState<Partial<ExpenseItem>>({
     vendorName: '',
     date: new Date().toISOString().split('T')[0],
     amount: 0,
-    currency: 'RM',
+    currency: defaultCurrency,
     category: ExpenseCategory.OTHERS,
     summary: '',
     portfolioId: undefined,
@@ -39,7 +41,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         vendorName: '',
         date: new Date().toISOString().split('T')[0],
         amount: 0,
-        currency: 'RM',
+        currency: defaultCurrency,
         category: ExpenseCategory.OTHERS,
         summary: '',
         portfolioId: defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : undefined),
@@ -125,11 +127,12 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                         value={formData.currency}
                         onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                       >
-                        <option>RM</option>
-                        <option>USD</option>
-                        <option>EUR</option>
-                        <option>GBP</option>
-                        <option>SGD</option>
+                        <option value="USD">USD</option>
+                        <option value="MYR">MYR</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="SGD">SGD</option>
+                        <option value="RM">RM</option>
                       </select>
                     </div>
                   </div>

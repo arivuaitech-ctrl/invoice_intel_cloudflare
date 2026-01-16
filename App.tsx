@@ -51,7 +51,7 @@ const formatDate = (rawDate: string) => {
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [budgets, setBudgets] = useState<MultiScopeBudget>({ portfolios: {} });
+  const [budgets, setBudgets] = useState<MultiScopeBudget>({ portfolios: {}, defaultCurrency: 'USD' });
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,7 +114,6 @@ export default function App() {
           setExpenses(data);
 
           const savedBudgets = db.getBudgets();
-          setBudgets(savedBudgets);
 
           // Fetch Portfolios
           setIsPortfolioLoading(true);
@@ -126,9 +125,21 @@ export default function App() {
           }
 
           setPortfolios(portfolioData);
-          if (portfolioData.length > 0) {
-            setActivePortfolioId(portfolioData[0].id);
+          const firstId = portfolioData[0]?.id;
+
+          if (firstId) {
+            setActivePortfolioId(firstId);
+
+            // Fix: If Page 1 has no budget, but we have a legacy global budget, migrate it
+            const legacyGlobal = (savedBudgets as any)._legacyGlobal;
+            if (legacyGlobal && !savedBudgets.portfolios[firstId]) {
+              console.log("[App] Migrating legacy global budget to first portfolio:", firstId);
+              savedBudgets.portfolios[firstId] = legacyGlobal;
+              db.saveBudgets(savedBudgets);
+            }
           }
+
+          setBudgets(savedBudgets);
           setIsPortfolioLoading(false);
         }
       } catch (err) {
@@ -203,7 +214,7 @@ export default function App() {
 
       if (currentTotal + amount > limit) {
         setTimeout(() => {
-          alert(`⚠️ Budget Alert: Spending on ${category} exceeds your RM ${limit} limit in ${activePortfolioId && activePortfolioId !== portfolios[0]?.id ? 'this page' : 'General'}.`);
+          alert(`⚠️ Budget Alert: Spending on ${category} exceeds your ${budgets.defaultCurrency} ${limit} limit in ${activePortfolioId && activePortfolioId !== portfolios[0]?.id ? 'this page' : 'General'}.`);
         }, 500);
       }
     }
@@ -237,7 +248,7 @@ export default function App() {
           vendorName: data.vendorName || 'Unknown Vendor',
           date: formatDate(data.date),
           amount: Number(data.amount) || 0,
-          currency: data.currency || 'RM',
+          currency: data.currency || budgets.defaultCurrency,
           category: data.category as ExpenseCategory || ExpenseCategory.OTHERS,
           summary: data.summary || '',
           createdAt: Date.now(),
@@ -448,6 +459,24 @@ export default function App() {
                 {badge.text}
               </button>
 
+              <div className="hidden sm:flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+                <select
+                  value={budgets.defaultCurrency}
+                  onChange={(e) => {
+                    const newBudgets = { ...budgets, defaultCurrency: e.target.value };
+                    setBudgets(newBudgets);
+                    db.saveBudgets(newBudgets);
+                  }}
+                  className="bg-transparent text-xs font-bold text-slate-600 border-none focus:ring-0 cursor-pointer px-2"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="MYR">MYR (RM)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="SGD">SGD (S$)</option>
+                </select>
+              </div>
+
               <div className="flex items-center gap-2 border-l pl-4">
                 <button
                   onClick={() => setIsProfileModalOpen(true)}
@@ -632,6 +661,7 @@ export default function App() {
           <AnalyticsView
             expenses={filteredExpenses}
             budgets={(activePortfolioId && budgets.portfolios[activePortfolioId]) ? budgets.portfolios[activePortfolioId] : ({} as BudgetMap)}
+            defaultCurrency={budgets.defaultCurrency}
           />
         )}
       </main>
@@ -643,6 +673,7 @@ export default function App() {
         initialData={editingItem}
         portfolios={portfolios}
         defaultPortfolioId={activePortfolioId}
+        defaultCurrency={budgets.defaultCurrency}
       />
       <BudgetModal
         isOpen={isBudgetModalOpen}

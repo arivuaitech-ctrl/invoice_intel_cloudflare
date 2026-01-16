@@ -91,7 +91,7 @@ const mapFromDb = (data: any): ExpenseItem => ({
   vendorName: data.vendor_name,
   date: data.date,
   amount: Number(data.amount) || 0,
-  currency: data.currency || 'RM',
+  currency: data.currency || 'USD',
   category: data.category as ExpenseCategory,
   summary: data.summary || '',
   fileName: data.file_name,
@@ -284,7 +284,12 @@ export const db = {
     const v4Data = localStorage.getItem('invoice_intel_budgets_v4');
     if (v4Data) {
       const v4 = JSON.parse(v4Data);
-      return { portfolios: v4.portfolios || {} };
+      const budgets: MultiScopeBudget = { portfolios: v4.portfolios || {}, defaultCurrency: 'USD' };
+      // Carry over global as a fallback for the first page if needed
+      if (v4.global) {
+        (budgets as any)._legacyGlobal = v4.global;
+      }
+      return budgets;
     }
 
     // Deep legacy migration from v3
@@ -296,10 +301,15 @@ export const db = {
         const prof = (v3.profiles || []).find((p: any) => p.id === profId);
         if (prof) portfolios[pId] = prof.map;
       });
-      return { portfolios };
+      const budgets: MultiScopeBudget = { portfolios, defaultCurrency: 'USD' };
+      const globalProfile = (v3.profiles || []).find((p: any) => p.id === 'global') || (v3.profiles || [])[0];
+      if (globalProfile) {
+        (budgets as any)._legacyGlobal = globalProfile.map;
+      }
+      return budgets;
     }
 
-    return { portfolios: {} };
+    return { portfolios: {}, defaultCurrency: 'USD' };
   },
 
   saveBudgets: (budgets: MultiScopeBudget): void => {

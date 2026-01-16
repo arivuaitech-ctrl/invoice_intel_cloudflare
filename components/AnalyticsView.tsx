@@ -9,11 +9,12 @@ import { TrendingUp, Award, Calendar, DollarSign, AlertCircle } from 'lucide-rea
 interface AnalyticsViewProps {
     expenses: ExpenseItem[];
     budgets: BudgetMap;
+    defaultCurrency: string;
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'];
 
-const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets }) => {
+const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets, defaultCurrency }) => {
 
     // Prepare Data for Charts
     const chartData = useMemo(() => {
@@ -173,10 +174,10 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets }) => {
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `RM${value}`} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => `${defaultCurrency}${value}`} />
                                 <Tooltip
                                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value: number) => [`RM ${value.toFixed(2)}`, 'Amount']}
+                                    formatter={(value: number) => [`${defaultCurrency} ${value.toFixed(2)}`, 'Amount']}
                                 />
                                 <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
                             </AreaChart>
@@ -203,7 +204,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets }) => {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value: number) => `RM ${value.toFixed(2)}`} />
+                                <Tooltip formatter={(value: number) => `${defaultCurrency} ${value.toFixed(2)}`} />
                                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
                             </PieChart>
                         </ResponsiveContainer>
@@ -223,7 +224,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets }) => {
                             <Tooltip
                                 cursor={{ fill: '#f8fafc' }}
                                 contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                formatter={(value: number) => [`RM ${value.toFixed(2)}`, 'Total']}
+                                formatter={(value: number) => [`${defaultCurrency} ${value.toFixed(2)}`, 'Total']}
                             />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
                                 {chartData.vendors.map((entry, index) => (

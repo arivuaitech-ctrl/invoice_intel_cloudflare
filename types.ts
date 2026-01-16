@@ -48,6 +48,7 @@ export type BudgetMap = Record<ExpenseCategory, number>;
 
 export interface MultiScopeBudget {
   portfolios: Record<string, BudgetMap>;
+  defaultCurrency: string;
 }
 
 export type SortField = 'date' | 'amount' | 'vendorName';

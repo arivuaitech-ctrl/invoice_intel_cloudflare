@@ -94,7 +94,7 @@ const BudgetModal: React.FC<BudgetModalProps> = ({
                   </label>
                   <div className="relative rounded-xl shadow-sm w-1/2">
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <span className="text-slate-400 text-xs font-bold">RM</span>
+                      <span className="text-slate-400 text-xs font-bold">{budgets.defaultCurrency}</span>
                     </div>
                     <input
                       type="number"
