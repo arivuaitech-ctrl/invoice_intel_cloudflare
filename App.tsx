@@ -583,7 +583,16 @@ export default function App() {
                   <p className="text-4xl font-black text-slate-900 mt-2">{budgets.defaultCurrency} {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                   <div className="h-20 mt-6">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={stats.categoryBreakdown.slice(0, 5)}><Bar dataKey="value" radius={[4, 4, 0, 0]}>{stats.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar></BarChart>
+                      <BarChart data={stats.categoryBreakdown.slice(0, 5)}>
+                        <Tooltip
+                          cursor={{ fill: '#f8fafc' }}
+                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
+                          formatter={(value: number) => [`${budgets.defaultCurrency} ${value.toFixed(2)}`, 'Total']}
+                        />
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                          {stats.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                        </Bar>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
