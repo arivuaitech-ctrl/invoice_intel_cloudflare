@@ -51,7 +51,7 @@ const formatDate = (rawDate: string) => {
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [budgets, setBudgets] = useState<MultiScopeBudget>({ global: {} as BudgetMap, portfolios: {} });
+  const [budgets, setBudgets] = useState<MultiScopeBudget>({ portfolios: {} });
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -141,8 +141,6 @@ export default function App() {
     initAuth();
 
     return () => {
-      clearTimeout(fallback);
-      subscription.unsubscribe();
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, []);
@@ -192,11 +190,9 @@ export default function App() {
   }
 
   function checkBudgetWarning(category: ExpenseCategory, amount: number) {
-    // 1. Determine active budget map (Portfolio-specific > Global)
-    const activeBudgetMap = (activePortfolioId && budgets.portfolios[activePortfolioId])
-      ? budgets.portfolios[activePortfolioId]
-      : budgets.global;
+    if (!activePortfolioId) return;
 
+    const activeBudgetMap = budgets.portfolios[activePortfolioId];
     if (!activeBudgetMap) return;
 
     const limit = activeBudgetMap[category];
@@ -635,7 +631,7 @@ export default function App() {
         ) : (
           <AnalyticsView
             expenses={filteredExpenses}
-            budgets={(activePortfolioId && budgets.portfolios[activePortfolioId]) ? budgets.portfolios[activePortfolioId] : budgets.global}
+            budgets={(activePortfolioId && budgets.portfolios[activePortfolioId]) ? budgets.portfolios[activePortfolioId] : ({} as BudgetMap)}
           />
         )}
       </main>

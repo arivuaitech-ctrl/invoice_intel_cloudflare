@@ -47,7 +47,6 @@ export interface Stats {
 export type BudgetMap = Record<ExpenseCategory, number>;
 
 export interface MultiScopeBudget {
-  global: BudgetMap;
   portfolios: Record<string, BudgetMap>;
 }
 

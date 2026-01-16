@@ -277,51 +277,32 @@ export const db = {
   },
 
   getBudgets: (): MultiScopeBudget => {
-    const data = localStorage.getItem('invoice_intel_budgets_v4');
+    const data = localStorage.getItem('invoice_intel_budgets_v5');
     if (data) return JSON.parse(data);
 
-    const defaultMap = {
-      [ExpenseCategory.FOOD]: 0,
-      [ExpenseCategory.PARKING]: 0,
-      [ExpenseCategory.TOLL]: 0,
-      [ExpenseCategory.OPTICAL]: 0,
-      [ExpenseCategory.DENTAL]: 0,
-      [ExpenseCategory.CLINIC]: 0,
-      [ExpenseCategory.MILEAGE]: 0,
-      [ExpenseCategory.AIRPORT]: 0,
-      [ExpenseCategory.TRANSPORT]: 0,
-      [ExpenseCategory.UTILITY]: 0,
-      [ExpenseCategory.REPAIR]: 0,
-      [ExpenseCategory.HOUSE_TAX]: 0,
-      [ExpenseCategory.FLIGHT]: 0,
-      [ExpenseCategory.HOTEL]: 0,
-      [ExpenseCategory.OTHERS]: 0,
-    };
+    // Migration from v4 (Remove Global)
+    const v4Data = localStorage.getItem('invoice_intel_budgets_v4');
+    if (v4Data) {
+      const v4 = JSON.parse(v4Data);
+      return { portfolios: v4.portfolios || {} };
+    }
 
-    // Migration from v3 (Profiles -> Direct)
+    // Deep legacy migration from v3
     const v3Data = localStorage.getItem('invoice_intel_budgets_v3');
     if (v3Data) {
       const v3 = JSON.parse(v3Data);
-      const globalProfile = (v3.profiles || []).find((p: any) => p.id === 'global') || (v3.profiles || [])[0];
-      const global = globalProfile ? globalProfile.map : { ...defaultMap };
-
       const portfolios: Record<string, BudgetMap> = {};
       Object.entries(v3.assignments || {}).forEach(([pId, profId]) => {
         const prof = (v3.profiles || []).find((p: any) => p.id === profId);
         if (prof) portfolios[pId] = prof.map;
       });
-
-      return { global, portfolios };
+      return { portfolios };
     }
 
-    // Fallback if no v3 but v2 exists
-    const v2Data = localStorage.getItem('invoice_intel_budgets_v2');
-    if (v2Data) return JSON.parse(v2Data);
-
-    return { global: { ...defaultMap }, portfolios: {} };
+    return { portfolios: {} };
   },
 
   saveBudgets: (budgets: MultiScopeBudget): void => {
-    localStorage.setItem('invoice_intel_budgets_v4', JSON.stringify(budgets));
+    localStorage.setItem('invoice_intel_budgets_v5', JSON.stringify(budgets));
   }
 };
