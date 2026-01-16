@@ -1,5 +1,5 @@
 
-import { ExpenseItem, BudgetMap, ExpenseCategory, Portfolio } from '../types';
+import { ExpenseItem, BudgetMap, MultiScopeBudget, ExpenseCategory, Portfolio } from '../types';
 import { supabase } from './supabaseClient';
 
 
@@ -276,11 +276,13 @@ export const db = {
     if (error) throw error;
   },
 
-  getBudgets: (): BudgetMap => {
-    const data = localStorage.getItem('invoice_intel_budgets_v1');
+  getBudgets: (): MultiScopeBudget => {
+    const data = localStorage.getItem('invoice_intel_budgets_v2');
     if (data) return JSON.parse(data);
 
-    return {
+    // Migration from v1
+    const v1Data = localStorage.getItem('invoice_intel_budgets_v1');
+    const defaultMap = {
       [ExpenseCategory.FOOD]: 0,
       [ExpenseCategory.PARKING]: 0,
       [ExpenseCategory.TOLL]: 0,
@@ -297,9 +299,16 @@ export const db = {
       [ExpenseCategory.HOTEL]: 0,
       [ExpenseCategory.OTHERS]: 0,
     };
+
+    const initialBudgets: MultiScopeBudget = {
+      global: v1Data ? JSON.parse(v1Data) : { ...defaultMap },
+      portfolios: {}
+    };
+
+    return initialBudgets;
   },
 
-  saveBudgets: (budgets: BudgetMap): void => {
-    localStorage.setItem('invoice_intel_budgets_v1', JSON.stringify(budgets));
+  saveBudgets: (budgets: MultiScopeBudget): void => {
+    localStorage.setItem('invoice_intel_budgets_v2', JSON.stringify(budgets));
   }
 };
