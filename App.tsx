@@ -51,7 +51,7 @@ const formatDate = (rawDate: string) => {
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [budgets, setBudgets] = useState<MultiScopeBudget>({ profiles: [], assignments: {} });
+  const [budgets, setBudgets] = useState<MultiScopeBudget>({ global: {} as BudgetMap, portfolios: {} });
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -192,13 +192,14 @@ export default function App() {
   }
 
   function checkBudgetWarning(category: ExpenseCategory, amount: number) {
-    // 1. Determine active profile
-    const profileId = activePortfolioId ? (budgets.assignments[activePortfolioId] || 'global') : 'global';
-    const profile = budgets.profiles.find(p => p.id === profileId) || budgets.profiles.find(p => p.id === 'global');
+    // 1. Determine active budget map (Portfolio-specific > Global)
+    const activeBudgetMap = (activePortfolioId && budgets.portfolios[activePortfolioId])
+      ? budgets.portfolios[activePortfolioId]
+      : budgets.global;
 
-    if (!profile) return;
+    if (!activeBudgetMap) return;
 
-    const limit = profile.map[category];
+    const limit = activeBudgetMap[category];
     if (limit && limit > 0) {
       const currentTotal = expenses
         .filter(e => e.category === category && (e.portfolioId === activePortfolioId || (!e.portfolioId && portfolios[0]?.id === activePortfolioId)))
@@ -206,7 +207,7 @@ export default function App() {
 
       if (currentTotal + amount > limit) {
         setTimeout(() => {
-          alert(`⚠️ Budget Alert: Spending on ${category} exceeds your RM ${limit} limit in ${activePortfolioId && activePortfolioId !== portfolios[0]?.id ? 'this page' : 'General'} (using ${profile.name} budget).`);
+          alert(`⚠️ Budget Alert: Spending on ${category} exceeds your RM ${limit} limit in ${activePortfolioId && activePortfolioId !== portfolios[0]?.id ? 'this page' : 'General'}.`);
         }, 500);
       }
     }
@@ -634,11 +635,7 @@ export default function App() {
         ) : (
           <AnalyticsView
             expenses={filteredExpenses}
-            budgets={(() => {
-              const pId = activePortfolioId ? (budgets.assignments[activePortfolioId] || 'global') : 'global';
-              const profile = budgets.profiles.find(p => p.id === pId) || budgets.profiles.find(p => p.id === 'global');
-              return profile?.map || {} as BudgetMap;
-            })()}
+            budgets={(activePortfolioId && budgets.portfolios[activePortfolioId]) ? budgets.portfolios[activePortfolioId] : budgets.global}
           />
         )}
       </main>

@@ -46,15 +46,9 @@ export interface Stats {
 
 export type BudgetMap = Record<ExpenseCategory, number>;
 
-export interface BudgetProfile {
-  id: string;
-  name: string;
-  map: BudgetMap;
-}
-
 export interface MultiScopeBudget {
-  profiles: BudgetProfile[];
-  assignments: Record<string, string>; // portfolioId -> profileId
+  global: BudgetMap;
+  portfolios: Record<string, BudgetMap>;
 }
 
 export type SortField = 'date' | 'amount' | 'vendorName';

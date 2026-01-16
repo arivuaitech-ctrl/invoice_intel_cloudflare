@@ -1,5 +1,5 @@
 
-import { ExpenseItem, BudgetMap, MultiScopeBudget, BudgetProfile, ExpenseCategory, Portfolio } from '../types';
+import { ExpenseItem, BudgetMap, MultiScopeBudget, ExpenseCategory, Portfolio } from '../types';
 import { supabase } from './supabaseClient';
 
 
@@ -277,10 +277,9 @@ export const db = {
   },
 
   getBudgets: (): MultiScopeBudget => {
-    const data = localStorage.getItem('invoice_intel_budgets_v3');
+    const data = localStorage.getItem('invoice_intel_budgets_v4');
     if (data) return JSON.parse(data);
 
-    // Default Map for fallback
     const defaultMap = {
       [ExpenseCategory.FOOD]: 0,
       [ExpenseCategory.PARKING]: 0,
@@ -299,32 +298,30 @@ export const db = {
       [ExpenseCategory.OTHERS]: 0,
     };
 
-    // Migration from v2
-    const v2Data = localStorage.getItem('invoice_intel_budgets_v2');
-    if (v2Data) {
-      const v2 = JSON.parse(v2Data);
-      const profiles: BudgetProfile[] = [
-        { id: 'global', name: 'Global Default', map: v2.global }
-      ];
-      const assignments: Record<string, string> = {};
+    // Migration from v3 (Profiles -> Direct)
+    const v3Data = localStorage.getItem('invoice_intel_budgets_v3');
+    if (v3Data) {
+      const v3 = JSON.parse(v3Data);
+      const globalProfile = (v3.profiles || []).find((p: any) => p.id === 'global') || (v3.profiles || [])[0];
+      const global = globalProfile ? globalProfile.map : { ...defaultMap };
 
-      Object.entries(v2.portfolios || {}).forEach(([pId, map]) => {
-        const profId = `prof_${pId}`;
-        profiles.push({ id: profId, name: `Portfolio Budget`, map: map as BudgetMap });
-        assignments[pId] = profId;
+      const portfolios: Record<string, BudgetMap> = {};
+      Object.entries(v3.assignments || {}).forEach(([pId, profId]) => {
+        const prof = (v3.profiles || []).find((p: any) => p.id === profId);
+        if (prof) portfolios[pId] = prof.map;
       });
 
-      return { profiles, assignments };
+      return { global, portfolios };
     }
 
-    // Default Initial State
-    return {
-      profiles: [{ id: 'global', name: 'Global Default', map: defaultMap }],
-      assignments: {}
-    };
+    // Fallback if no v3 but v2 exists
+    const v2Data = localStorage.getItem('invoice_intel_budgets_v2');
+    if (v2Data) return JSON.parse(v2Data);
+
+    return { global: { ...defaultMap }, portfolios: {} };
   },
 
   saveBudgets: (budgets: MultiScopeBudget): void => {
-    localStorage.setItem('invoice_intel_budgets_v3', JSON.stringify(budgets));
+    localStorage.setItem('invoice_intel_budgets_v4', JSON.stringify(budgets));
   }
 };
