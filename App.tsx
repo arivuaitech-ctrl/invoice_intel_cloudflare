@@ -248,7 +248,7 @@ export default function App() {
           vendorName: data.vendorName || 'Unknown Vendor',
           date: formatDate(data.date),
           amount: Number(data.amount) || 0,
-          currency: data.currency || budgets.defaultCurrency,
+          currency: budgets.defaultCurrency, // ALWAYS use global currency
           category: data.category as ExpenseCategory || ExpenseCategory.OTHERS,
           summary: data.summary || '',
           createdAt: Date.now(),
@@ -469,11 +469,31 @@ export default function App() {
                   }}
                   className="bg-transparent text-xs font-bold text-slate-600 border-none focus:ring-0 cursor-pointer px-2"
                 >
-                  <option value="USD">USD ($)</option>
-                  <option value="MYR">MYR (RM)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="SGD">SGD (S$)</option>
+                  <optgroup label="Global">
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="AUD">AUD (A$)</option>
+                    <option value="CAD">CAD (C$)</option>
+                    <option value="CHF">CHF (Fr)</option>
+                    <option value="NZD">NZD (NZ$)</option>
+                  </optgroup>
+                  <optgroup label="Asian">
+                    <option value="CNY">CNY (¥)</option>
+                    <option value="HKD">HKD (HK$)</option>
+                    <option value="SGD">SGD (S$)</option>
+                    <option value="KRW">KRW (₩)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="TWD">TWD (NT$)</option>
+                    <option value="THB">THB (฿)</option>
+                    <option value="IDR">IDR (Rp)</option>
+                    <option value="MYR">MYR (RM)</option>
+                    <option value="PHP">PHP (₱)</option>
+                    <option value="VND">VND (₫)</option>
+                    <option value="SAR">SAR (SR)</option>
+                    <option value="AED">AED (Dh)</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -560,7 +580,7 @@ export default function App() {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5"><ImageIcon className="w-24 h-24" /></div>
                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Expenses</p>
-                  <p className="text-4xl font-black text-slate-900 mt-2">RM {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <p className="text-4xl font-black text-slate-900 mt-2">{budgets.defaultCurrency} {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                   <div className="h-20 mt-6">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={stats.categoryBreakdown.slice(0, 5)}><Bar dataKey="value" radius={[4, 4, 0, 0]}>{stats.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar></BarChart>
@@ -570,7 +590,7 @@ export default function App() {
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Top Category</p>
                   <p className="text-2xl font-black text-indigo-600 mt-2">{stats.categoryBreakdown[0]?.name || 'No data'}</p>
-                  <p className="text-sm text-slate-500 font-medium">RM {stats.categoryBreakdown[0]?.value.toFixed(2) || '0.00'}</p>
+                  <p className="text-sm text-slate-500 font-medium">{budgets.defaultCurrency} {stats.categoryBreakdown[0]?.value.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
             </div>

@@ -121,19 +121,10 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
                     />
-                    <div className="absolute inset-y-0 right-0 flex items-center">
-                      <select
-                        className="h-full rounded-md border-transparent bg-transparent py-0 pl-2 pr-7 text-slate-500 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-white"
-                        value={formData.currency}
-                        onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                      >
-                        <option value="USD">USD</option>
-                        <option value="MYR">MYR</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                        <option value="SGD">SGD</option>
-                        <option value="RM">RM</option>
-                      </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <span className="text-slate-400 sm:text-sm font-bold">
+                        {defaultCurrency}
+                      </span>
                     </div>
                   </div>
                 </div>

@@ -89,11 +89,11 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets, defaul
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
                     <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600">
-                        <span className="font-bold text-lg">RM</span>
+                        <span className="font-bold text-lg">{defaultCurrency}</span>
                     </div>
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Total Spending</p>
-                        <p className="text-2xl font-bold text-slate-900">RM {totalSpent.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-slate-900">{defaultCurrency} {totalSpent.toFixed(2)}</p>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
@@ -102,7 +102,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets, defaul
                     </div>
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Average Transaction</p>
-                        <p className="text-2xl font-bold text-slate-900">RM {averageTransaction.toFixed(2)}</p>
+                        <p className="text-2xl font-bold text-slate-900">{defaultCurrency} {averageTransaction.toFixed(2)}</p>
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-4">
@@ -112,7 +112,7 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets, defaul
                     <div>
                         <p className="text-sm text-slate-500 font-medium">Highest Month</p>
                         <p className="text-2xl font-bold text-slate-900">{maxMonth.name}</p>
-                        <p className="text-xs text-slate-400">RM {maxMonth.value.toFixed(2)}</p>
+                        <p className="text-xs text-slate-400">{defaultCurrency} {maxMonth.value.toFixed(2)}</p>
                     </div>
                 </div>
             </div>
@@ -141,9 +141,9 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ expenses, budgets, defaul
                                 )}
                             </div>
                             <div className="text-lg font-bold text-slate-900 mb-1">
-                                RM {item.spent.toFixed(0)}
+                                {defaultCurrency} {item.spent.toFixed(0)}
                                 <span className="text-xs text-slate-400 font-normal ml-1">
-                                    / {item.limit > 0 ? `RM ${item.limit}` : '∞'}
+                                    / {item.limit > 0 ? `${defaultCurrency} ${item.limit}` : '∞'}
                                 </span>
                             </div>
                             {item.limit > 0 && (
