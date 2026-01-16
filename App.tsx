@@ -10,7 +10,7 @@ import {
   RefreshCw, CheckCircle2, X, Loader2, ShieldAlert, ImageIcon, HelpCircle, User
 } from 'lucide-react';
 
-import { ExpenseItem, Stats, SortField, SortOrder, ExpenseCategory, BudgetMap, UserProfile } from './types';
+import { ExpenseItem, Stats, SortField, SortOrder, ExpenseCategory, BudgetMap, UserProfile, Portfolio } from './types';
 import { db } from './services/db';
 import { extractInvoiceData, fileToGenerativePart } from './services/geminiService';
 import { userService } from './services/userService';
@@ -62,6 +62,9 @@ export default function App() {
   const [progressStatus, setProgressStatus] = useState<string>('');
   const [paymentStatus, setPaymentStatus] = useState<'success' | 'cancelled' | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [activePortfolioId, setActivePortfolioId] = useState<string | null>(null);
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -109,6 +112,21 @@ export default function App() {
 
           const data = await db.getAll(session.user.id);
           setExpenses(data);
+
+          // Fetch Portfolios
+          setIsPortfolioLoading(true);
+          let portfolioData = await db.getPortfolios(session.user.id);
+
+          if (portfolioData.length === 0) {
+            const defaultPortfolio = await db.addPortfolio('General', session.user.id);
+            portfolioData = [defaultPortfolio];
+          }
+
+          setPortfolios(portfolioData);
+          if (portfolioData.length > 0) {
+            setActivePortfolioId(portfolioData[0].id);
+          }
+          setIsPortfolioLoading(false);
         }
       } catch (err) {
         console.error("Auth init error:", err);
@@ -134,7 +152,8 @@ export default function App() {
         const matchesSearch = vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
           summary.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+        const matchesPortfolio = !activePortfolioId || item.portfolioId === activePortfolioId;
+        return matchesSearch && matchesCategory && matchesPortfolio;
       })
       .sort((a, b) => {
         let valA = a[sortField];
@@ -213,7 +232,8 @@ export default function App() {
           summary: data.summary || '',
           createdAt: Date.now(),
           fileName: fileName,
-          imageData: `data:${imageInfo.mimeType};base64,${imageInfo.data}`
+          imageData: `data:${imageInfo.mimeType};base64,${imageInfo.data}`,
+          portfolioId: activePortfolioId || undefined
         };
         await db.add(newExpense, user.id);
         checkBudgetWarning(newExpense.category, newExpense.amount);
@@ -235,7 +255,11 @@ export default function App() {
   async function handleSaveExpense(item: ExpenseItem) {
     if (!user) return;
     const oldExpenses = [...expenses];
-    const cleanedItem = { ...item, date: formatDate(item.date) };
+    const cleanedItem = {
+      ...item,
+      date: formatDate(item.date),
+      portfolioId: item.portfolioId || activePortfolioId || undefined
+    };
 
     if (expenses.some(e => e.id === item.id)) {
       setExpenses(prev => prev.map(e => e.id === item.id ? cleanedItem : e));
@@ -296,6 +320,56 @@ export default function App() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Expenses");
     XLSX.writeFile(wb, `InvoiceIntel_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+  }
+
+  // --- Portfolio Handlers ---
+  async function handleCreatePortfolio() {
+    if (!user) return;
+    const name = window.prompt("Enter page name:");
+    if (!name) return;
+
+    try {
+      const newPortfolio = await db.addPortfolio(name, user.id);
+      setPortfolios(prev => [...prev, newPortfolio]);
+      setActivePortfolioId(newPortfolio.id);
+    } catch (err) {
+      console.error("Failed to create page:", err);
+      alert("Failed to create page.");
+    }
+  }
+
+  async function handleRenamePortfolio(id: string, currentName: string) {
+    const name = window.prompt("Rename page:", currentName);
+    if (!name || name === currentName) return;
+
+    try {
+      await db.updatePortfolio(id, name);
+      setPortfolios(prev => prev.map(p => p.id === id ? { ...p, name } : p));
+    } catch (err) {
+      console.error("Failed to rename page:", err);
+      alert("Failed to rename page.");
+    }
+  }
+
+  async function handleDeletePortfolio(id: string) {
+    if (portfolios.length <= 1) {
+      alert("You must have at least one page.");
+      return;
+    }
+    if (window.confirm("Are you sure? This will delete all expenses in this page!")) {
+      try {
+        await db.deletePortfolio(id, user!.id);
+        const updatedPortfolios = portfolios.filter(p => p.id !== id);
+        setPortfolios(updatedPortfolios);
+        setExpenses(prev => prev.filter(e => e.portfolioId !== id));
+        if (activePortfolioId === id) {
+          setActivePortfolioId(updatedPortfolios[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to delete page:", err);
+        alert("Failed to delete page.");
+      }
+    }
   }
 
   if (loading) return (
@@ -379,6 +453,49 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* Portfolio Tabs */}
+      <div className="bg-white border-b border-slate-200 shadow-sm overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-1 py-2 overflow-x-auto no-scrollbar">
+            {portfolios.map((portfolio: Portfolio) => (
+              <div
+                key={portfolio.id}
+                className={`group flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${activePortfolioId === portfolio.id
+                  ? 'bg-indigo-50 text-indigo-600 shadow-sm border border-indigo-100'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                  }`}
+                onClick={() => setActivePortfolioId(portfolio.id)}
+              >
+                <span>{portfolio.name}</span>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleRenamePortfolio(portfolio.id, portfolio.name); }}
+                    className="p-1 hover:bg-white rounded transition-colors"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </button>
+                  {portfolios.length > 1 && (
+                    <button
+                      onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleDeletePortfolio(portfolio.id); }}
+                      className="p-1 hover:bg-white hover:text-red-600 rounded transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={handleCreatePortfolio}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-all whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span>New Page</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {view === 'expenses' ? (
@@ -502,7 +619,14 @@ export default function App() {
         )}
       </main>
 
-      <ExpenseModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingItem(undefined); }} onSave={handleSaveExpense} initialData={editingItem} />
+      <ExpenseModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setEditingItem(undefined); }}
+        onSave={handleSaveExpense}
+        initialData={editingItem}
+        portfolios={portfolios}
+        defaultPortfolioId={activePortfolioId}
+      />
       <BudgetModal isOpen={isBudgetModalOpen} onClose={() => setIsBudgetModalOpen(false)} budgets={budgets} onSave={handleSaveBudgets} />
       <PricingModal isOpen={isPricingModalOpen} onClose={() => setIsPricingModalOpen(false)} user={user} onSuccess={setUser} />
       <ProfileModal

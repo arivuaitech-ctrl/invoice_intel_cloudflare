@@ -1,5 +1,5 @@
 
-import { ExpenseItem, BudgetMap, ExpenseCategory } from '../types';
+import { ExpenseItem, BudgetMap, ExpenseCategory, Portfolio } from '../types';
 import { supabase } from './supabaseClient';
 
 
@@ -75,6 +75,7 @@ const mapToDb = (item: ExpenseItem, userId?: string) => {
     summary: item.summary,
     file_name: item.fileName,
     // image_data: item.imageData, // REMOVED FOR PDPA COMPLIANCE
+    portfolio_id: item.portfolioId,
     created_at: item.createdAt
   };
 
@@ -95,10 +96,83 @@ const mapFromDb = (data: any): ExpenseItem => ({
   summary: data.summary || '',
   fileName: data.file_name,
   imageData: undefined, // Will be hydrated from local storage
+  portfolioId: data.portfolio_id,
   createdAt: data.created_at
 });
 
 export const db = {
+  // --- Portfolio Methods ---
+  getPortfolios: async (userId: string): Promise<Portfolio[]> => {
+    const { data, error } = await supabase
+      .from('portfolios')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error("Error fetching portfolios:", error);
+      return [];
+    }
+
+    return (data || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      userId: p.user_id,
+      createdAt: new Date(p.created_at).getTime()
+    }));
+  },
+
+  addPortfolio: async (name: string, userId: string): Promise<Portfolio> => {
+    const { data, error } = await supabase
+      .from('portfolios')
+      .insert([{ name, user_id: userId }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return {
+      id: data.id,
+      name: data.name,
+      userId: data.user_id,
+      createdAt: new Date(data.created_at).getTime()
+    };
+  },
+
+  updatePortfolio: async (id: string, name: string): Promise<void> => {
+    const { error } = await supabase
+      .from('portfolios')
+      .update({ name })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  deletePortfolio: async (id: string, userId: string): Promise<void> => {
+    // 1. Delete associated expenses first (or rely on Cascade if configured, but we have RLS & local images)
+    // For now, manual cleanup for local images and then delete from cloud
+    const { data: expenses } = await supabase
+      .from('expenses')
+      .select('id')
+      .eq('portfolio_id', id)
+      .eq('user_id', userId);
+
+    if (expenses) {
+      for (const exp of expenses) {
+        await localImageStore.delete(exp.id);
+      }
+    }
+
+    // 2. Delete portfolio (this will delete linked expenses in cloud if CASCADE is set)
+    const { error } = await supabase
+      .from('portfolios')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+  },
+
+  // --- Expense Methods ---
   getAll: async (userId: string): Promise<ExpenseItem[]> => {
     const { data, error } = await supabase
       .from('expenses')

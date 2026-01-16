@@ -17,6 +17,13 @@ export enum ExpenseCategory {
   OTHERS = 'Others'
 }
 
+export interface Portfolio {
+  id: string;
+  name: string;
+  userId: string;
+  createdAt: number;
+}
+
 export interface ExpenseItem {
   id: string;
   vendorName: string;
@@ -28,6 +35,7 @@ export interface ExpenseItem {
   createdAt: number;
   fileName?: string;
   imageData?: string; // Base64 string of the receipt image
+  portfolioId?: string; // Optional: Link to a portfolio/page
 }
 
 export interface Stats {
