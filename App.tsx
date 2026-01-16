@@ -152,19 +152,23 @@ export default function App() {
         const matchesSearch = vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
           summary.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-        const matchesPortfolio = !activePortfolioId || item.portfolioId === activePortfolioId;
+
+        // Match active portfolio OR legacy items showing in the first portfolio
+        const isFirstPortfolio = portfolios.length > 0 && activePortfolioId === portfolios[0].id;
+        const matchesPortfolio = item.portfolioId === activePortfolioId || (isFirstPortfolio && !item.portfolioId);
+
         return matchesSearch && matchesCategory && matchesPortfolio;
       })
       .sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+        let valA = a[sortField] as any;
+        let valB = b[sortField] as any;
         if (typeof valA === 'string') valA = valA.toLowerCase();
         if (typeof valB === 'string') valB = valB.toLowerCase();
         if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
         if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [expenses, searchTerm, selectedCategory, sortField, sortOrder]);
+  }, [expenses, searchTerm, selectedCategory, sortField, sortOrder, activePortfolioId, portfolios]);
 
   const stats = useMemo<Stats>(() => {
     const totalAmount = filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
@@ -188,7 +192,7 @@ export default function App() {
     const limit = budgets[category];
     if (limit && limit > 0) {
       const currentTotal = expenses
-        .filter(e => e.category === category)
+        .filter(e => e.category === category && (e.portfolioId === activePortfolioId || (!e.portfolioId && portfolios[0]?.id === activePortfolioId)))
         .reduce((sum, e) => sum + e.amount, 0);
 
       if (currentTotal + amount > limit) {
@@ -312,7 +316,7 @@ export default function App() {
   }
 
   async function handleExport() {
-    const dataToExport = expenses.map(({ id, createdAt, imageData, ...rest }) => ({
+    const dataToExport = filteredExpenses.map(({ id, createdAt, imageData, ...rest }) => ({
       ...rest,
       date_created: new Date(createdAt).toLocaleString()
     }));
@@ -325,6 +329,10 @@ export default function App() {
   // --- Portfolio Handlers ---
   async function handleCreatePortfolio() {
     if (!user) return;
+    if (portfolios.length >= 10) {
+      alert("Maximum 10 pages allowed. Please delete an existing page first.");
+      return;
+    }
     const name = window.prompt("Enter page name:");
     if (!name) return;
 
@@ -615,7 +623,7 @@ export default function App() {
             </div>
           </>
         ) : (
-          <AnalyticsView expenses={expenses} budgets={budgets} />
+          <AnalyticsView expenses={filteredExpenses} budgets={budgets} />
         )}
       </main>
 
