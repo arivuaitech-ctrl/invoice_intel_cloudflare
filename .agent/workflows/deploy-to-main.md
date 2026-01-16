@@ -1,41 +1,52 @@
 ---
-description: How to migrate changes from Stage to main
+description: Migration workflow from Stage to main (Production)
 ---
 
-Follow these steps to safely merge your staging changes into the production branch.
+This guide outlines the professional workflow for merging verified changes from the `Stage` branch into the `main` branch.
 
-### 1. Ensure Stage is clean
-Make sure all your changes are committed on the `Stage` branch.
+### 1. Finalize Staging
+Ensure your current work is fully committed and the branch is synchronized with any remote changes.
+// turbo
 ```powershell
+git checkout Stage
+git pull origin Stage
 git add .
-git commit -m "Your final staging changes"
+git commit -m "chore: final preparations for production merge"
 ```
 
-### 2. Switch to the main branch
+### 2. Prepare the Production Branch
+Switch to `main` and ensure it has the latest production state.
 // turbo
 ```powershell
 git checkout main
+git pull origin main
 ```
 
-### 3. Merge Stage into main
+### 3. Integrate Changes
+Merge the `Stage` branch into `main`. Using `--no-ff` (no-fast-forward) is recommended to maintain a clear merge commit in history.
 // turbo
 ```powershell
-git merge Stage
+git merge Stage --no-ff -m "chore: merge staging updates to production"
 ```
 
-### 4. Push to production
-If you are using a remote repository (like GitHub), push the changes.
+> [!CAUTION]
+> If conflicts occur, resolve them in your IDE, then run `git add .` and `git commit` to finalize.
+
+### 4. Deploy to Production
+Push the integrated changes to the remote repository. This typically triggers the CI/CD pipeline.
 // turbo
 ```powershell
 git push origin main
 ```
 
-### 5. Switch back to Stage
-Continue development on staging.
+### 5. Post-Deployment Cleanup
+Switch back to `Stage` to resume development.
 // turbo
 ```powershell
 git checkout Stage
 ```
 
-> [!TIP]
-> If you encounter merge conflicts, Git will pause and ask you to resolve them before finishing the merge.
+---
+**Standard Practice Reminders:**
+- Never merge to `main` if the build is failing on `Stage`.
+- Always run a final local build (`npm run build`) before pushing to production.
