@@ -472,24 +472,24 @@ export default function App() {
                   onChange={async (e) => {
                     const newCurrency = e.target.value;
                     const newBudgets = { ...budgets, defaultCurrency: newCurrency };
+
+                    // 1. Update local state immediately for instant feedback
                     setBudgets(newBudgets);
                     db.saveBudgets(newBudgets);
+                    setExpenses(prev => prev.map(exp => ({ ...exp, currency: newCurrency })));
 
-                    // Bulk update existing expenses in Supabase
                     if (user) {
                       try {
                         setIsSyncing(true);
-                        // 1. Update historical expenses
+                        // 2. Sync historical records to Cloud
                         await db.updateAllExpCurrency(user.id, newCurrency);
-                        // 2. Update user profile preference in cloud
+
+                        // 3. Sync profile preference to Cloud
                         const updatedUser = await userService.updateProfileCurrency(user.id, newCurrency);
                         setUser(updatedUser);
-
-                        // Update local state immediately for better UX
-                        setExpenses(prev => prev.map(exp => ({ ...exp, currency: newCurrency })));
                       } catch (err) {
-                        console.error("Failed to update historical currencies:", err);
-                        alert("Failed to synchronize historical data to the new currency.");
+                        console.error("Cloud synchronization failed:", err);
+                        alert("Settings saved locally, but failed to sync with your Cloud profile. Please ensure you have run the database migration.");
                       } finally {
                         setIsSyncing(false);
                       }
