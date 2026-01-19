@@ -139,6 +139,13 @@ export default function App() {
             }
           }
 
+          // Align localStorage currency with profile currency if they differ
+          if (profile.defaultCurrency && profile.defaultCurrency !== savedBudgets.defaultCurrency) {
+            console.log(`[App] Aligning local currency (${savedBudgets.defaultCurrency}) with profile (${profile.defaultCurrency})`);
+            savedBudgets.defaultCurrency = profile.defaultCurrency;
+            db.saveBudgets(savedBudgets);
+          }
+
           setBudgets(savedBudgets);
           setIsPortfolioLoading(false);
         }
@@ -158,7 +165,7 @@ export default function App() {
 
   const filteredExpenses = useMemo(() => {
     return expenses
-      .filter(item => {
+      .filter((item: ExpenseItem) => {
         const vendor = item.vendorName || '';
         const summary = item.summary || '';
         const matchesSearch = vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,7 +178,7 @@ export default function App() {
 
         return matchesSearch && matchesCategory && matchesPortfolio;
       })
-      .sort((a, b) => {
+      .sort((a: ExpenseItem, b: ExpenseItem) => {
         let valA = a[sortField] as any;
         let valB = b[sortField] as any;
         if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -183,7 +190,7 @@ export default function App() {
   }, [expenses, searchTerm, selectedCategory, sortField, sortOrder, activePortfolioId, portfolios]);
 
   const stats = useMemo<Stats>(() => {
-    const totalAmount = filteredExpenses.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const totalAmount = filteredExpenses.reduce((sum: number, item: ExpenseItem) => sum + (Number(item.amount) || 0), 0);
     const catMap = new Map<string, number>();
     filteredExpenses.forEach(item => {
       catMap.set(item.category, (catMap.get(item.category) || 0) + (Number(item.amount) || 0));
@@ -462,10 +469,31 @@ export default function App() {
               <div className="hidden sm:flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
                 <select
                   value={budgets.defaultCurrency}
-                  onChange={(e) => {
-                    const newBudgets = { ...budgets, defaultCurrency: e.target.value };
+                  onChange={async (e) => {
+                    const newCurrency = e.target.value;
+                    const newBudgets = { ...budgets, defaultCurrency: newCurrency };
                     setBudgets(newBudgets);
                     db.saveBudgets(newBudgets);
+
+                    // Bulk update existing expenses in Supabase
+                    if (user) {
+                      try {
+                        setIsSyncing(true);
+                        // 1. Update historical expenses
+                        await db.updateAllExpCurrency(user.id, newCurrency);
+                        // 2. Update user profile preference in cloud
+                        const updatedUser = await userService.updateProfileCurrency(user.id, newCurrency);
+                        setUser(updatedUser);
+
+                        // Update local state immediately for better UX
+                        setExpenses(prev => prev.map(exp => ({ ...exp, currency: newCurrency })));
+                      } catch (err) {
+                        console.error("Failed to update historical currencies:", err);
+                        alert("Failed to synchronize historical data to the new currency.");
+                      } finally {
+                        setIsSyncing(false);
+                      }
+                    }
                   }}
                   className="bg-transparent text-xs font-bold text-slate-600 border-none focus:ring-0 cursor-pointer px-2"
                 >

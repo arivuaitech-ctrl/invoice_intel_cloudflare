@@ -51,7 +51,8 @@ const mapProfile = (data: any): UserProfile => ({
   hasConsented: !!data.has_consented,
   consentTimestamp: data.consent_timestamp,
   consentVersion: data.consent_version,
-  consentIp: data.consent_ip
+  consentIp: data.consent_ip,
+  defaultCurrency: data.default_currency || 'USD'
 });
 
 export const userService = {
@@ -239,6 +240,21 @@ export const userService = {
       .single();
 
     if (error) throw error;
+    return mapProfile(data);
+  },
+
+  updateProfileCurrency: async (userId: string, newCurrency: string): Promise<UserProfile> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ default_currency: newCurrency })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Profile currency update error:", error);
+      throw error;
+    }
     return mapProfile(data);
   }
 };

@@ -276,6 +276,18 @@ export const db = {
     if (error) throw error;
   },
 
+  updateAllExpCurrency: async (userId: string, newCurrency: string): Promise<void> => {
+    const { error } = await supabase
+      .from('expenses')
+      .update({ currency: newCurrency })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error("Bulk currency update error:", error);
+      throw error;
+    }
+  },
+
   getBudgets: (): MultiScopeBudget => {
     const data = localStorage.getItem('invoice_intel_budgets_v5');
     if (data) return JSON.parse(data);

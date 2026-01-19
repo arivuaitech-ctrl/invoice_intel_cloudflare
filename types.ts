@@ -76,6 +76,7 @@ export interface UserProfile {
   consentTimestamp?: number | null; // New: when they consented
   consentVersion?: string; // New: version of terms accepted
   consentIp?: string; // New: IP address at consent
+  defaultCurrency?: string; // New: Global preference stored in profile
 }
 
 export interface PricingTier {
