@@ -18,6 +18,7 @@ import { stripeService } from './services/stripeService';
 import { supabase } from './services/supabaseClient';
 import { cameraService } from './services/cameraService';
 import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 
 import FileUpload from './components/FileUpload';
 import Button from './components/Button';
@@ -160,8 +161,31 @@ export default function App() {
 
     initAuth();
 
+    // Handle deep links (Supabase/Stripe redirects)
+    const setupDeepLinks = async () => {
+      CapApp.addListener('appUrlOpen', (data: any) => {
+        console.log('[App] App opened with URL:', data.url);
+
+        // Example URL: com.arivuaitech.invoiceintel://payment/success?payment=success
+        const url = new URL(data.url.replace('com.arivuaitech.invoiceintel://', 'https://dummy.com/'));
+        const payment = url.searchParams.get('payment');
+
+        if (payment === 'success') {
+          setPaymentStatus('success');
+          setIsSyncing(true);
+        } else if (payment === 'cancelled') {
+          setPaymentStatus('cancelled');
+        }
+
+        // Potential for handling Supabase magic links if they are implemented via deep link
+        // Currently relying on Supabase SDK to pick up the hash/params if the URL remains in state
+      });
+    };
+    setupDeepLinks();
+
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      CapApp.removeAllListeners();
     };
   }, []);
 

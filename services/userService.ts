@@ -1,6 +1,7 @@
 
 import { UserProfile, PricingTier } from '../types';
 import { supabase } from './supabaseClient';
+import { Capacitor } from '@capacitor/core';
 
 export const PRICING_PACKAGES: PricingTier[] = [
   {
@@ -88,21 +89,31 @@ export const userService = {
   },
 
   login: async () => {
+    const isNative = Capacitor.isNativePlatform();
+    const redirectTo = isNative
+      ? 'com.arivuaitech.invoiceintel://auth/callback'
+      : window.location.origin;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: redirectTo
       }
     });
     if (error) throw error;
   },
 
   loginWithEmail: async (email: string) => {
+    const isNative = Capacitor.isNativePlatform();
+    const redirectTo = isNative
+      ? 'com.arivuaitech.invoiceintel://auth/callback'
+      : window.location.origin;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         shouldCreateUser: true,
-        emailRedirectTo: window.location.origin
+        emailRedirectTo: redirectTo
       }
     });
     if (error) throw error;

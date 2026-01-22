@@ -1,6 +1,7 @@
 
 import { UserProfile } from '../types';
 import { PRICING_PACKAGES } from './userService';
+import { Capacitor } from '@capacitor/core';
 
 export const stripeService = {
   /**
@@ -18,7 +19,8 @@ export const stripeService = {
           priceId: pkg.id,
           userId: user.id,
           userEmail: user.email,
-          currency: currency.toLowerCase()
+          currency: currency.toLowerCase(),
+          isMobile: Capacitor.isNativePlatform()
         })
       });
 

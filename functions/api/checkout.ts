@@ -18,7 +18,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
   try {
     const body: any = await context.request.json();
-    const { priceId, userId, userEmail, currency = 'myr' } = body;
+    const { priceId, userId, userEmail, currency = 'myr', isMobile = false } = body;
 
     const priceMap: Record<string, string | undefined> = {
       'basic': context.env.STRIPE_PRICE_ID_BASIC,
@@ -38,6 +38,15 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     const origin = new URL(context.request.url).origin;
     const cleanBaseUrl = context.env.SITE_URL || origin;
 
+    // Use mobile deep link scheme if request is from the mobile app
+    const successUrl = isMobile
+      ? 'com.arivuaitech.invoiceintel://payment/success?session_id={CHECKOUT_SESSION_ID}&payment=success'
+      : `${cleanBaseUrl}/?session_id={CHECKOUT_SESSION_ID}&payment=success`;
+
+    const cancelUrl = isMobile
+      ? 'com.arivuaitech.invoiceintel://payment/cancelled?payment=cancelled'
+      : `${cleanBaseUrl}/?payment=cancelled`;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
@@ -46,8 +55,8 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       }],
       currency: currency.toLowerCase(), // Important: Specify currency for multi-currency prices
       mode: 'subscription',
-      success_url: `${cleanBaseUrl}/?session_id={CHECKOUT_SESSION_ID}&payment=success`,
-      cancel_url: `${cleanBaseUrl}/?payment=cancelled`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       customer_email: userEmail,
       metadata: {
         userId,
