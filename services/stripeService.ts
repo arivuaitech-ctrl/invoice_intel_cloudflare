@@ -12,7 +12,8 @@ export const stripeService = {
     if (!pkg) throw new Error("Invalid package selected");
 
     try {
-      const response = await fetch('/api/checkout', {
+      const API_BASE_URL = process.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE_URL}/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -49,7 +50,8 @@ export const stripeService = {
    */
   redirectToCustomerPortal: async (customerId: string): Promise<void> => {
     try {
-      const response = await fetch('/api/customer-portal', {
+      const API_BASE_URL = process.env.VITE_API_URL || '';
+      const response = await fetch(`${API_BASE_URL}/api/customer-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ customerId })

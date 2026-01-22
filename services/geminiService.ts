@@ -27,7 +27,7 @@ export const extractInvoiceData = async (file: File | Blob) => {
     const filePart = await fileToGenerativePart(file);
 
     // Use a configurable API URL, defaulting to the same origin for web or a specific URL for mobile
-    const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
+    const API_BASE_URL = process.env.VITE_API_URL || '';
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers: {
