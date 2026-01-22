@@ -734,13 +734,13 @@ export default function App() {
                   <Button variant="secondary" className="flex-1 sm:flex-none text-[10px] sm:text-xs py-2" onClick={handleExport} icon={<Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}>Export</Button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full -mx-4 sm:mx-0 px-4 sm:px-0">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50/50">
                     <tr>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Details</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest hidden sm:table-cell">Category</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
                     </tr>
@@ -768,13 +768,10 @@ export default function App() {
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
-                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[100px] sm:max-w-none">{expense.vendorName}</p>
-                          <span className="sm:hidden px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
-                            {expense.category}
-                          </span>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[80px] sm:max-w-none">{expense.vendorName}</p>
                         </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
-                          <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                          <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
                             {expense.category}
                           </span>
                         </td>

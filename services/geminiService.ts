@@ -1,5 +1,5 @@
-
 import { ExpenseCategory } from "../types";
+import { Capacitor } from "@capacitor/core";
 
 export const fileToGenerativePart = async (file: File | Blob): Promise<{ mimeType: string; data: string }> => {
   return new Promise((resolve, reject) => {
@@ -26,8 +26,8 @@ export const extractInvoiceData = async (file: File | Blob) => {
   try {
     const filePart = await fileToGenerativePart(file);
 
-    // Use a configurable API URL, defaulting to the same origin for web or a specific URL for mobile
-    const API_BASE_URL = process.env.VITE_API_URL || '';
+    // Use relative path for web (to same origin) and absolute path for mobile
+    const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
     const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers: {

@@ -12,7 +12,7 @@ export const stripeService = {
     if (!pkg) throw new Error("Invalid package selected");
 
     try {
-      const API_BASE_URL = process.env.VITE_API_URL || '';
+      const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
       const response = await fetch(`${API_BASE_URL}/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,7 +50,7 @@ export const stripeService = {
    */
   redirectToCustomerPortal: async (customerId: string): Promise<void> => {
     try {
-      const API_BASE_URL = process.env.VITE_API_URL || '';
+      const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
       const response = await fetch(`${API_BASE_URL}/api/customer-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
