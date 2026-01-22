@@ -163,13 +163,14 @@ export default function App() {
 
     // Handle deep links (Supabase/Stripe redirects)
     const setupDeepLinks = async () => {
-      CapApp.addListener('appUrlOpen', (data: any) => {
+      CapApp.addListener('appUrlOpen', async (data: any) => {
         console.log('[App] App opened with URL:', data.url);
 
-        // Example URL: com.arivuaitech.invoiceintel://payment/success?payment=success
-        const url = new URL(data.url.replace('com.arivuaitech.invoiceintel://', 'https://dummy.com/'));
-        const payment = url.searchParams.get('payment');
+        const urlStr = data.url.replace('com.arivuaitech.invoiceintel://', 'https://dummy.com/');
+        const url = new URL(urlStr);
 
+        // 1. Handle Payment Redirects
+        const payment = url.searchParams.get('payment');
         if (payment === 'success') {
           setPaymentStatus('success');
           setIsSyncing(true);
@@ -177,8 +178,41 @@ export default function App() {
           setPaymentStatus('cancelled');
         }
 
-        // Potential for handling Supabase magic links if they are implemented via deep link
-        // Currently relying on Supabase SDK to pick up the hash/params if the URL remains in state
+        // 2. Handle Supabase Auth Redirects
+        if (data.url.includes('access_token=') || data.url.includes('refresh_token=')) {
+          console.log('[App] Auth redirect detected');
+
+          try {
+            // Try hash first (common for OAuth flows)
+            let params = new URLSearchParams(url.hash.substring(1));
+
+            // Fallback to search params
+            if (!params.has('access_token')) {
+              params = url.searchParams;
+            }
+
+            const access_token = params.get('access_token');
+            const refresh_token = params.get('refresh_token');
+
+            if (access_token && refresh_token) {
+              console.log('[App] Setting session from deep link...');
+              const { error } = await supabase.auth.setSession({
+                access_token,
+                refresh_token
+              });
+
+              if (error) throw error;
+
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                const profile = await userService.upsertProfile(session.user);
+                setUser(profile);
+              }
+            }
+          } catch (err) {
+            console.error('[App] Error handling auth deep link:', err);
+          }
+        }
       });
     };
     setupDeepLinks();
@@ -300,8 +334,12 @@ export default function App() {
     if (successCount > 0) {
       const updatedUser = await userService.recordUsage(user, successCount);
       setUser(updatedUser);
+      // Ensure we fetch the latest data from the DB to reflect the new additions
       await refreshExpenses();
+    } else if (files.length > 0) {
+      alert("AI was unable to extract data from the receipt(s). Please try again with a clearer photo or enter details manually.");
     }
+
     setIsProcessing(false);
     setProgressStatus('');
   }
@@ -487,7 +525,7 @@ export default function App() {
   const badge = badgeInfo();
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 overflow-x-hidden w-full">
       {isGeminiKeyMissing && (
         <div className="bg-amber-500 text-white animate-slideDown shadow-md relative z-50">
           <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center text-xs font-bold gap-3">
@@ -503,13 +541,13 @@ export default function App() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-indigo-200 shadow-xl">
-                <Sparkles className="text-white w-6 h-6" />
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-indigo-200 shadow-xl shrink-0">
+                <Sparkles className="text-white w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-              <div className="ml-2">
-                <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">InvoiceIntel</h1>
-                <p className="text-[10px] text-slate-400 font-bold hidden md:block">Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals and Individuals</p>
+              <div className="ml-1 sm:ml-2 min-w-0 flex-shrink">
+                <h1 className="text-base sm:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 truncate max-w-[110px] sm:max-w-none">InvoiceIntel</h1>
+                <p className="text-[10px] text-slate-400 font-bold hidden md:block italic">Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals and Individuals</p>
               </div>
             </div>
 
@@ -518,22 +556,22 @@ export default function App() {
               <button onClick={() => setView('analytics')} className={`flex items-center px-5 py-2 text-sm font-bold rounded-lg transition-all ${view === 'analytics' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><PieChartIcon className="w-4 h-4 mr-2" />Insights</button>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5 sm:gap-4 flex-shrink-0">
               <button
                 onClick={() => setIsPricingModalOpen(true)}
-                className={`hidden sm:flex items-center px-4 py-2 rounded-full text-xs font-black border transition-all hover:scale-105 active:scale-95 ${badge.color}`}
+                className={`flex items-center px-1.5 sm:px-4 py-1 sm:py-2 rounded-full text-[9px] sm:text-xs font-black border transition-all hover:scale-105 active:scale-95 ${badge.color}`}
               >
-                {badge.text}
+                <CreditCard className="w-3 h-3 sm:hidden mr-0.5" />
+                <span className="truncate max-w-[50px] sm:max-w-none">{badge.text}</span>
               </button>
 
-              <div className="hidden sm:flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1 sm:gap-2 bg-slate-100 p-0.5 sm:p-1 rounded-lg sm:rounded-xl">
                 <select
                   value={budgets.defaultCurrency}
                   onChange={async (e) => {
                     const newCurrency = e.target.value;
                     const newBudgets = { ...budgets, defaultCurrency: newCurrency };
 
-                    // 1. Update local state immediately for instant feedback
                     setBudgets(newBudgets);
                     db.saveBudgets(newBudgets);
                     setExpenses(prev => prev.map(exp => ({ ...exp, currency: newCurrency })));
@@ -541,62 +579,45 @@ export default function App() {
                     if (user) {
                       try {
                         setIsSyncing(true);
-                        // 2. Sync historical records to Cloud
                         await db.updateAllExpCurrency(user.id, newCurrency);
-
-                        // 3. Sync profile preference to Cloud
                         const updatedUser = await userService.updateProfileCurrency(user.id, newCurrency);
                         setUser(updatedUser);
                       } catch (err) {
                         console.error("Cloud synchronization failed:", err);
-                        alert("Settings saved locally, but failed to sync with your Cloud profile. Please ensure you have run the database migration.");
+                        alert("Settings saved locally, but failed to sync with your Cloud profile.");
                       } finally {
                         setIsSyncing(false);
                       }
                     }
                   }}
-                  className="bg-transparent text-xs font-bold text-slate-600 border-none focus:ring-0 cursor-pointer px-2"
+                  className="bg-transparent text-[10px] sm:text-xs font-black text-slate-600 border-none focus:ring-0 cursor-pointer px-1 sm:px-2"
                 >
                   <optgroup label="Global">
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="JPY">JPY (¥)</option>
-                    <option value="AUD">AUD (A$)</option>
-                    <option value="CAD">CAD (C$)</option>
-                    <option value="CHF">CHF (Fr)</option>
-                    <option value="NZD">NZD (NZ$)</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
                   </optgroup>
                   <optgroup label="Asian">
-                    <option value="CNY">CNY (¥)</option>
-                    <option value="HKD">HKD (HK$)</option>
-                    <option value="SGD">SGD (S$)</option>
-                    <option value="KRW">KRW (₩)</option>
-                    <option value="INR">INR (₹)</option>
-                    <option value="TWD">TWD (NT$)</option>
-                    <option value="THB">THB (฿)</option>
-                    <option value="IDR">IDR (Rp)</option>
-                    <option value="MYR">MYR (RM)</option>
-                    <option value="PHP">PHP (₱)</option>
-                    <option value="VND">VND (₫)</option>
-                    <option value="SAR">SAR (SR)</option>
-                    <option value="AED">AED (Dh)</option>
+                    <option value="MYR">MYR</option>
+                    <option value="SGD">SGD</option>
+                    <option value="CNY">CNY</option>
                   </optgroup>
                 </select>
               </div>
 
-              <div className="flex items-center gap-2 border-l pl-4">
+              <div className="flex items-center gap-1 sm:gap-2 border-l pl-1.5 sm:pl-4">
                 <button
                   onClick={() => setIsProfileModalOpen(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-slate-100 transition-all group"
+                  className="flex items-center gap-1.5 p-1 sm:px-3 sm:py-1.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-slate-100 transition-all group lg:min-w-[120px]"
                   title="Your Profile"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors shrink-0">
                     <User className="w-4 h-4 text-indigo-600" />
                   </div>
-                  <div className="hidden sm:block text-left">
+                  <div className="hidden lg:block text-left truncate">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 leading-none mb-1">User Profile</p>
-                    <p className="text-sm font-bold text-slate-700 leading-none">{user.name.split(' ')[0]}</p>
+                    <p className="text-sm font-bold text-slate-700 leading-none truncate">{user.name.split(' ')[0]}</p>
                   </div>
                 </button>
               </div>
@@ -648,13 +669,13 @@ export default function App() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {view === 'expenses' ? (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
               <div className="lg:col-span-1">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                  <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800"><Plus className="w-5 h-5 text-indigo-600" />Scan Receipt</h2>
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <h2 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 flex items-center gap-2 text-slate-800"><Plus className="w-5 h-5 text-indigo-600" />Scan Receipt</h2>
                   <FileUpload
                     onFilesSelect={handleFilesSelect}
                     isProcessing={isProcessing}
@@ -664,28 +685,28 @@ export default function App() {
                     <button
                       onClick={handleMobileCameraScan}
                       disabled={isProcessing || !userService.canUpload(user, 1).allowed}
-                      className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full mt-3 sm:mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                     >
                       <Sparkles className="w-5 h-5" />
                       Scan Receipt with Camera
                     </button>
                   )}
-                  {progressStatus && <div className="mt-4 p-3 bg-indigo-50 text-indigo-700 rounded-xl text-xs text-center font-black animate-pulse border border-indigo-100">{progressStatus}</div>}
-                  <div className="mt-4 pt-4 border-t text-center"><button onClick={() => setIsModalOpen(true)} className="text-sm font-bold text-indigo-600 hover:text-indigo-800">Or type details manually</button></div>
+                  {progressStatus && <div className="mt-3 sm:mt-4 p-3 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] sm:text-xs text-center font-black animate-pulse border border-indigo-100">{progressStatus}</div>}
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t text-center"><button onClick={() => setIsModalOpen(true)} className="text-xs sm:text-sm font-bold text-indigo-600 hover:text-indigo-800">Or type details manually</button></div>
                 </div>
               </div>
-              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-4 opacity-5"><ImageIcon className="w-24 h-24" /></div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Total Expenses</p>
-                  <p className="text-4xl font-black text-slate-900 mt-2">{budgets.defaultCurrency} {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                  <div className="h-20 mt-6">
+              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5"><ImageIcon className="w-16 sm:w-24 h-16 sm:h-24" /></div>
+                  <p className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">Total Expenses</p>
+                  <p className="text-2xl sm:text-4xl font-black text-slate-900 mt-1 sm:mt-2">{budgets.defaultCurrency} {stats.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                  <div className="h-16 sm:h-20 mt-4 sm:mt-6">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={stats.categoryBreakdown.slice(0, 5)}>
                         <Tooltip
                           cursor={{ fill: '#f8fafc' }}
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-                          formatter={(value: number) => [`${budgets.defaultCurrency} ${value.toFixed(2)}`, 'Total']}
+                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+                          formatter={(value: any) => [`${budgets.defaultCurrency} ${Number(value || 0).toFixed(2)}`, 'Total']}
                         />
                         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                           {stats.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -694,47 +715,44 @@ export default function App() {
                     </ResponsiveContainer>
                   </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Top Category</p>
-                  <p className="text-2xl font-black text-indigo-600 mt-2">{stats.categoryBreakdown[0]?.name || 'No data'}</p>
-                  <p className="text-sm text-slate-500 font-medium">{budgets.defaultCurrency} {stats.categoryBreakdown[0]?.value.toFixed(2) || '0.00'}</p>
+                <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+                  <p className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest">Top Category</p>
+                  <p className="text-xl sm:text-2xl font-black text-indigo-600 mt-1 sm:mt-2">{stats.categoryBreakdown[0]?.name || 'No data'}</p>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium">{budgets.defaultCurrency} {stats.categoryBreakdown[0]?.value.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-5 border-b flex flex-col sm:flex-row gap-4 justify-between items-center bg-slate-50/30">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-3 sm:p-5 border-b flex flex-col sm:flex-row gap-3 sm:gap-4 justify-between items-center bg-slate-50/30">
                 <div className="relative w-full sm:w-96">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input type="text" className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Search expenses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <input type="text" className="w-full pl-10 pr-4 py-2 sm:py-2.5 border border-slate-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Search expenses..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <Button variant="secondary" className="flex-1 sm:flex-none" onClick={() => setIsBudgetModalOpen(true)} icon={<Settings className="w-4 h-4" />}>Budget</Button>
-                  <Button variant="secondary" className="flex-1 sm:flex-none" onClick={handleExport} icon={<Download className="w-4 h-4" />}>Export</Button>
+                  <Button variant="secondary" className="flex-1 sm:flex-none text-[10px] sm:text-xs py-2" onClick={() => setIsBudgetModalOpen(true)} icon={<Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}>Budget</Button>
+                  <Button variant="secondary" className="flex-1 sm:flex-none text-[10px] sm:text-xs py-2" onClick={handleExport} icon={<Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}>Export</Button>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50/50">
                     <tr>
-                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
-                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Date / Vendor</th>
-                      <th className="px-6 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
-                      <th className="px-6 py-4 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Details</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest hidden sm:table-cell">Category</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-100">
                     {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => (
                       <tr key={expense.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           {expense.imageData ? (
                             <div
-                              onClick={() => {
-                                console.log(`[App] Opening image for ${expense.vendorName}. Has data: ${!!expense.imageData}`);
-                                setViewingImage({ url: expense.imageData!, title: expense.vendorName });
-                              }}
-                              className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden cursor-pointer hover:ring-2 ring-indigo-500 transition-all flex items-center justify-center"
+                              onClick={() => setViewingImage({ url: expense.imageData!, title: expense.vendorName })}
+                              className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden cursor-pointer hover:ring-2 ring-indigo-500 transition-all flex items-center justify-center shrink-0"
                             >
                               {expense.imageData.startsWith('data:application/pdf') ? (
                                 <List className="w-5 h-5 text-slate-400" />
@@ -743,31 +761,31 @@ export default function App() {
                               )}
                             </div>
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center">
                               <ImageIcon className="w-4 h-4 text-slate-300" />
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <p className="text-xs font-medium text-slate-500">{expense.date}</p>
-                          <p className="text-sm font-bold text-slate-900">{expense.vendorName}</p>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                          <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[100px] sm:max-w-none">{expense.vendorName}</p>
+                          <span className="sm:hidden px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+                            {expense.category}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden sm:table-cell">
                           <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
                             {expense.category}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-black text-slate-900">
-                          <span className="text-[10px] text-slate-400 mr-1">{expense.currency}</span>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right font-black text-slate-900">
+                          <span className="text-[8px] sm:text-[10px] text-slate-400 mr-0.5 sm:mr-1">{expense.currency}</span>
                           {(Number(expense.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm font-medium">
-                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {expense.imageData && (
-                              <button onClick={() => setViewingImage({ url: expense.imageData!, title: expense.vendorName })} className="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-indigo-50"><Eye className="w-4 h-4" /></button>
-                            )}
-                            <button onClick={() => { setEditingItem(expense); setIsModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-indigo-50"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDelete(expense.id)} className="text-slate-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right text-sm font-medium">
+                          <div className="flex justify-end gap-1">
+                            <button onClick={() => { setEditingItem(expense); setIsModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-1.5 sm:p-2 rounded-lg hover:bg-indigo-50"><Edit2 className="w-4 h-4" /></button>
+                            <button onClick={() => handleDelete(expense.id)} className="text-slate-400 hover:text-red-600 p-1.5 sm:p-2 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
                       </tr>
@@ -857,6 +875,28 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-[60] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button
+          onClick={() => setView('expenses')}
+          className={`flex flex-col items-center gap-1 transition-colors ${view === 'expenses' ? 'text-indigo-600' : 'text-slate-400'}`}
+        >
+          <div className={`p-1.5 rounded-xl ${view === 'expenses' ? 'bg-indigo-50' : ''}`}>
+            <List className="w-6 h-6" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider">List</span>
+        </button>
+        <button
+          onClick={() => setView('analytics')}
+          className={`flex flex-col items-center gap-1 transition-colors ${view === 'analytics' ? 'text-indigo-600' : 'text-slate-400'}`}
+        >
+          <div className={`p-1.5 rounded-xl ${view === 'analytics' ? 'bg-indigo-50' : ''}`}>
+            <PieChartIcon className="w-6 h-6" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-wider">Insights</span>
+        </button>
+      </div>
     </div>
   );
 }

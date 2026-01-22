@@ -46,8 +46,12 @@ export const extractInvoiceData = async (file: File | Blob) => {
 
     const data = await response.json();
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calling Analysis API:", error);
+    // Include more details if it's a fetch error to help identify CORS issues
+    if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+      console.error("This is likely a CORS or connection error. Ensure VITE_API_URL is correct and backend allows requests from mobile Origins.");
+    }
     throw error;
   }
 };

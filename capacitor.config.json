@@ -1,0 +1,9 @@
+{
+    "appId": "com.arivuaitech.invoiceintel",
+    "appName": "Invoice Intel",
+    "webDir": "dist",
+    "bundledWebRuntime": false,
+    "server": {
+        "androidScheme": "https"
+    }
+}
