@@ -26,8 +26,9 @@ export const extractInvoiceData = async (file: File | Blob) => {
   try {
     const filePart = await fileToGenerativePart(file);
 
-    // Call server-side function to hide API Key
-    const response = await fetch('/api/analyze', {
+    // Use a configurable API URL, defaulting to the same origin for web or a specific URL for mobile
+    const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
+    const response = await fetch(`${API_BASE_URL}/api/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

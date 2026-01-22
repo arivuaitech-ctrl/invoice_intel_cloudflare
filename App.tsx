@@ -16,6 +16,8 @@ import { extractInvoiceData, fileToGenerativePart } from './services/geminiServi
 import { userService } from './services/userService';
 import { stripeService } from './services/stripeService';
 import { supabase } from './services/supabaseClient';
+import { cameraService } from './services/cameraService';
+import { Capacitor } from '@capacitor/core';
 
 import FileUpload from './components/FileUpload';
 import Button from './components/Button';
@@ -278,6 +280,40 @@ export default function App() {
     }
     setIsProcessing(false);
     setProgressStatus('');
+  }
+
+  async function handleMobileCameraScan() {
+    if (!user) return;
+    const status = userService.canUpload(user, 1);
+    if (!status.allowed) {
+      setIsPricingModalOpen(true);
+      return;
+    }
+
+    try {
+      const photo = await cameraService.takePhoto();
+      if (photo) {
+        setIsProcessing(true);
+        setProgressStatus('Analyzing captured receipt...');
+
+        // Convert base64 to Blob/File for compatibility with existing extractInvoiceData
+        const byteCharacters = atob(photo.base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: `image/${photo.format}` });
+
+        await handleFilesSelect([blob]);
+      }
+    } catch (error) {
+      console.error("Camera scan failed:", error);
+      alert("Failed to capture photo.");
+    } finally {
+      setIsProcessing(false);
+      setProgressStatus('');
+    }
   }
 
   async function handleSaveExpense(item: ExpenseItem) {
@@ -600,6 +636,16 @@ export default function App() {
                     isProcessing={isProcessing}
                     isDisabled={!userService.canUpload(user, 1).allowed}
                   />
+                  {Capacitor.isNativePlatform() && (
+                    <button
+                      onClick={handleMobileCameraScan}
+                      disabled={isProcessing || !userService.canUpload(user, 1).allowed}
+                      className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Sparkles className="w-5 h-5" />
+                      Scan Receipt with Camera
+                    </button>
+                  )}
                   {progressStatus && <div className="mt-4 p-3 bg-indigo-50 text-indigo-700 rounded-xl text-xs text-center font-black animate-pulse border border-indigo-100">{progressStatus}</div>}
                   <div className="mt-4 pt-4 border-t text-center"><button onClick={() => setIsModalOpen(true)} className="text-sm font-bold text-indigo-600 hover:text-indigo-800">Or type details manually</button></div>
                 </div>
