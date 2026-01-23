@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:staging": "vite build --mode staging && cap sync android",
+    "build:prod": "vite build --mode production && cap sync android",
+    "open:android": "cap open android",
     "preview": "vite preview"
   },
   "dependencies": {
