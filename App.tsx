@@ -114,6 +114,14 @@ export default function App() {
     return () => window.removeEventListener('open-pricing', handleOpenPricing);
   }, []);
 
+  // Ensure activePortfolioId is always set if we have portfolios
+  useEffect(() => {
+    if (!activePortfolioId && portfolios.length > 0) {
+      console.log("Auto-setting activePortfolioId to first portfolio");
+      setActivePortfolioId(portfolios[0].id);
+    }
+  }, [portfolios, activePortfolioId]);
+
   useEffect(() => {
     const initAuth = async () => {
       try {
