@@ -119,8 +119,8 @@ const ImageViewer = ({ isOpen, onClose, imageUrl, title }: ImageViewerProps) => 
           url: savedFile.uri,
         });
       } catch (err) {
-        console.error("Native share failed:", err);
-        alert("Failed to share file.");
+        console.warn("Native share cancelled or failed:", err);
+        // alert("Failed to share file."); // Suppress alert for better UX on cancel
       }
     } else {
       const link = document.createElement('a');

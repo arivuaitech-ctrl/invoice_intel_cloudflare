@@ -485,8 +485,8 @@ export default function App() {
         });
 
       } catch (e) {
-        console.error("Mobile export failed:", e);
-        alert("Failed to export on mobile. Please check permissions.");
+        console.warn("Mobile export/share cancelled or failed:", e);
+        // alert("Failed to export on mobile. Please check permissions."); // Suppress alert for better UX on cancel
       }
     } else {
       XLSX.writeFile(wb, `InvoiceIntel_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
