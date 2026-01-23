@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Download, AlertCircle, Loader2 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 interface ImageViewerProps {
   isOpen: boolean;
@@ -87,11 +90,44 @@ const ImageViewer = ({ isOpen, onClose, imageUrl, title }: ImageViewerProps) => 
 
   const isPdf = imageUrl.toLowerCase().startsWith('data:application/pdf');
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `receipt-${title.toLowerCase().replace(/\s+/g, '-')}.${isPdf ? 'pdf' : 'jpg'}`;
-    link.click();
+  const handleDownload = async () => {
+    if (Capacitor.isNativePlatform() && safeUrl) {
+      try {
+        const fileName = `receipt-${title.toLowerCase().replace(/\s+/g, '-')}.${isPdf ? 'pdf' : 'jpg'}`;
+        // For data URLs, we can parse them directly
+        let data = safeUrl;
+        if (safeUrl.startsWith('data:')) {
+          // Keep as is
+        } else {
+          // Assuming it's a blob url or remote, might be tricky. 
+          // For now, our safeUrl is usually a blob URL which Filesystem can't read directly unless we fetch it.
+          // However, looking at App.tsx, the imageData is stored as base64 data URI!
+          // So if safeUrl is a blob URL, we might need the original 'imageUrl' which IS the data URI.
+          data = imageUrl;
+        }
+
+        // Strip prefix for filesystem write
+        const base64Data = data.split(',')[1];
+
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Documents
+        });
+
+        await Share.share({
+          url: savedFile.uri,
+        });
+      } catch (err) {
+        console.error("Native share failed:", err);
+        alert("Failed to share file.");
+      }
+    } else {
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = `receipt-${title.toLowerCase().replace(/\s+/g, '-')}.${isPdf ? 'pdf' : 'jpg'}`;
+      link.click();
+    }
   };
 
   return (

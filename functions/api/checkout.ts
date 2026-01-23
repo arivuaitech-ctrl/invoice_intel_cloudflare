@@ -38,13 +38,13 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
     const origin = new URL(context.request.url).origin;
     const cleanBaseUrl = context.env.SITE_URL || origin;
 
-    // Use mobile deep link scheme if request is from the mobile app
+    // Use mobile bridge page if request is from the mobile app
+    // This avoids browsers blocking the custom protocol redirect directly from Stripe
     const successUrl = isMobile
-      ? 'com.arivuaitech.invoiceintel://payment/success?session_id={CHECKOUT_SESSION_ID}&payment=success'
+      ? `${cleanBaseUrl}/?mode=mobile_bridge&payment=success&session_id={CHECKOUT_SESSION_ID}`
       : `${cleanBaseUrl}/?session_id={CHECKOUT_SESSION_ID}&payment=success`;
-
     const cancelUrl = isMobile
-      ? 'com.arivuaitech.invoiceintel://payment/cancelled?payment=cancelled'
+      ? `${cleanBaseUrl}/?mode=mobile_bridge&payment=cancelled`
       : `${cleanBaseUrl}/?payment=cancelled`;
 
     const session = await stripe.checkout.sessions.create({

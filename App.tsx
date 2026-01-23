@@ -19,6 +19,8 @@ import { supabase } from './services/supabaseClient';
 import { cameraService } from './services/cameraService';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 import FileUpload from './components/FileUpload';
 import Button from './components/Button';
@@ -85,6 +87,14 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
+    const mode = params.get('mode');
+
+    // Bridge Mode: If we are on the mobile bridge page, sit and wait for user to click "Return to App"
+    // The "Return to App" button will trigger the custom scheme
+    if (mode === 'mobile_bridge') {
+      console.log("Bridge mode active");
+      return; // logic handled in render
+    }
 
     if (payment === 'success') {
       setPaymentStatus('success');
@@ -438,14 +448,40 @@ export default function App() {
   }
 
   async function handleExport() {
-    const dataToExport = filteredExpenses.map(({ id, createdAt, imageData, ...rest }) => ({
+    const dataToExport = filteredExpenses.map(({ id, createdAt, imageData, portfolioId, ...rest }) => ({
       ...rest,
       date_created: new Date(createdAt).toLocaleString()
     }));
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Expenses");
-    XLSX.writeFile(wb, `InvoiceIntel_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' });
+        const fileName = `InvoiceIntel_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: wbout,
+          directory: Directory.Documents, // or Directory.Cache
+          encoding: Encoding.UTF8
+        });
+
+        await Share.share({
+          title: 'Export Expenses',
+          text: 'Here is your expense report.',
+          url: savedFile.uri,
+          dialogTitle: 'Share your expenses'
+        });
+
+      } catch (e) {
+        console.error("Mobile export failed:", e);
+        alert("Failed to export on mobile. Please check permissions.");
+      }
+    } else {
+      XLSX.writeFile(wb, `InvoiceIntel_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
   }
 
   // --- Portfolio Handlers ---
@@ -525,7 +561,25 @@ export default function App() {
   const badge = badgeInfo();
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 overflow-x-hidden w-full">
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 overflow-x-hidden w-full touch-pan-y">
+      {/* Bridge Overlay */}
+      {new URLSearchParams(window.location.search).get('mode') === 'mobile_bridge' && (
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-10 h-10 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Payment Completed</h2>
+          <p className="text-slate-500 mb-8">Your transaction was processed successfully.</p>
+
+          <a
+            href={`com.arivuaitech.invoiceintel://payment/success?${new URLSearchParams(window.location.search).toString()}`}
+            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-indigo-200"
+          >
+            Return to App
+          </a>
+        </div>
+      )}
+
       {isGeminiKeyMissing && (
         <div className="bg-amber-500 text-white animate-slideDown shadow-md relative z-50">
           <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center text-xs font-bold gap-3">
