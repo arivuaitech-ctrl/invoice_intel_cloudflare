@@ -149,7 +149,8 @@ export default function App() {
           const firstId = portfolioData[0]?.id;
 
           if (firstId) {
-            setActivePortfolioId(firstId);
+            // Fix: Set active portfolio immediately so filters work
+            setActivePortfolioId(prev => prev || firstId);
 
             // Fix: If Page 1 has no budget, but we have a legacy global budget, migrate it
             const legacyGlobal = (savedBudgets as any)._legacyGlobal;
@@ -472,7 +473,7 @@ export default function App() {
         const savedFile = await Filesystem.writeFile({
           path: fileName,
           data: wbout,
-          directory: Directory.Documents, // or Directory.Cache
+          directory: Directory.Cache, // Use Cache for better mobile permissions
           encoding: Encoding.UTF8
         });
 

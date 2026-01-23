@@ -112,7 +112,7 @@ const ImageViewer = ({ isOpen, onClose, imageUrl, title }: ImageViewerProps) => 
         const savedFile = await Filesystem.writeFile({
           path: fileName,
           data: base64Data,
-          directory: Directory.Documents
+          directory: Directory.Cache
         });
 
         await Share.share({
