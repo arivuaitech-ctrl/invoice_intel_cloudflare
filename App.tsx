@@ -123,62 +123,75 @@ export default function App() {
   }, [portfolios, activePortfolioId]);
 
   useEffect(() => {
-    const initAuth = async () => {
+    // Moved data fetching to a reusable function
+    const fetchData = async (sessionUser: any) => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        setLoading(true);
+        const profile = await userService.upsertProfile(sessionUser);
+        setUser(profile);
 
-        if (session?.user) {
-          const profile = await userService.upsertProfile(session.user);
-          setUser(profile);
+        const data = await db.getAll(sessionUser.id);
+        setExpenses(data);
 
-          const data = await db.getAll(session.user.id);
-          setExpenses(data);
+        const savedBudgets = db.getBudgets();
 
-          const savedBudgets = db.getBudgets();
+        // Fetch Portfolios
+        setIsPortfolioLoading(true);
+        let portfolioData = await db.getPortfolios(sessionUser.id);
 
-          // Fetch Portfolios
-          setIsPortfolioLoading(true);
-          let portfolioData = await db.getPortfolios(session.user.id);
+        if (portfolioData.length === 0) {
+          const defaultPortfolio = await db.addPortfolio('General', sessionUser.id);
+          portfolioData = [defaultPortfolio];
+        }
 
-          if (portfolioData.length === 0) {
-            const defaultPortfolio = await db.addPortfolio('General', session.user.id);
-            portfolioData = [defaultPortfolio];
-          }
+        setPortfolios(portfolioData);
+        const firstId = portfolioData[0]?.id;
 
-          setPortfolios(portfolioData);
-          const firstId = portfolioData[0]?.id;
+        if (firstId) {
+          setActivePortfolioId(prev => prev || firstId);
 
-          if (firstId) {
-            // Fix: Set active portfolio immediately so filters work
-            setActivePortfolioId(prev => prev || firstId);
-
-            // Fix: If Page 1 has no budget, but we have a legacy global budget, migrate it
-            const legacyGlobal = (savedBudgets as any)._legacyGlobal;
-            if (legacyGlobal && !savedBudgets.portfolios[firstId]) {
-              console.log("[App] Migrating legacy global budget to first portfolio:", firstId);
-              savedBudgets.portfolios[firstId] = legacyGlobal;
-              db.saveBudgets(savedBudgets);
-            }
-          }
-
-          // Align localStorage currency with profile currency if they differ
-          if (profile.defaultCurrency && profile.defaultCurrency !== savedBudgets.defaultCurrency) {
-            console.log(`[App] Aligning local currency (${savedBudgets.defaultCurrency}) with profile (${profile.defaultCurrency})`);
-            savedBudgets.defaultCurrency = profile.defaultCurrency;
+          const legacyGlobal = (savedBudgets as any)._legacyGlobal;
+          if (legacyGlobal && !savedBudgets.portfolios[firstId]) {
+            console.log("[App] Migrating legacy global budget to first portfolio:", firstId);
+            savedBudgets.portfolios[firstId] = legacyGlobal;
             db.saveBudgets(savedBudgets);
           }
-
-          setBudgets(savedBudgets);
-          setIsPortfolioLoading(false);
         }
+
+        if (profile.defaultCurrency && profile.defaultCurrency !== savedBudgets.defaultCurrency) {
+          savedBudgets.defaultCurrency = profile.defaultCurrency;
+          db.saveBudgets(savedBudgets);
+        }
+
+        setBudgets(savedBudgets);
+        setIsPortfolioLoading(false);
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Data fetch error:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    initAuth();
+    // Initialize Auth Listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // If we have a session but haven't loaded data for this user yet
+      if (session?.user && (!user || user.id !== session.user.id)) {
+        console.log("[App] Auth State Changed: Fetching Data");
+        fetchData(session.user);
+      } else if (!session) {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    // Initial Check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchData(session.user);
+      } else {
+        setLoading(false);
+      }
+    });
 
     // Handle deep links (Supabase/Stripe redirects)
     const setupDeepLinks = async () => {
@@ -205,7 +218,6 @@ export default function App() {
             // Try hash first (common for OAuth flows)
             let params = new URLSearchParams(url.hash.substring(1));
 
-            // Fallback to search params
             if (!params.has('access_token')) {
               params = url.searchParams;
             }
@@ -214,19 +226,8 @@ export default function App() {
             const refresh_token = params.get('refresh_token');
 
             if (access_token && refresh_token) {
-              console.log('[App] Setting session from deep link...');
-              const { error } = await supabase.auth.setSession({
-                access_token,
-                refresh_token
-              });
-
-              if (error) throw error;
-
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session?.user) {
-                const profile = await userService.upsertProfile(session.user);
-                setUser(profile);
-              }
+              await supabase.auth.setSession({ access_token, refresh_token });
+              // The onAuthStateChange listener will pick this up automatically
             }
           } catch (err) {
             console.error('[App] Error handling auth deep link:', err);
@@ -239,6 +240,7 @@ export default function App() {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       CapApp.removeAllListeners();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -252,8 +254,12 @@ export default function App() {
         const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
 
         // Match active portfolio OR legacy items showing in the first portfolio
+        // Fail-safe: if portfolios haven't loaded yet (length 0), show everything to avoid blank screen
         const isFirstPortfolio = portfolios.length > 0 && activePortfolioId === portfolios[0].id;
-        const matchesPortfolio = item.portfolioId === activePortfolioId || (isFirstPortfolio && !item.portfolioId);
+        const matchesPortfolio =
+          portfolios.length === 0 || // FAIL OPEN: Show all if portfolios missing
+          item.portfolioId === activePortfolioId ||
+          (isFirstPortfolio && !item.portfolioId);
 
         return matchesSearch && matchesCategory && matchesPortfolio;
       })
