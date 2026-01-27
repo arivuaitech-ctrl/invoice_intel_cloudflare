@@ -571,8 +571,21 @@ export default function App() {
     if (user.isAdmin) return { text: 'Admin Mode', color: 'bg-purple-50 text-purple-700 border-purple-200' };
     if (user.isTrialActive) return { text: `Trial: ${user.monthlyDocsLimit - user.docsUsedThisMonth} left`, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     if (user.planId === 'free') return { text: 'Limit Reached', color: 'bg-red-50 text-red-700 border-red-200' };
+
     const remaining = user.monthlyDocsLimit - user.docsUsedThisMonth;
-    return { text: `${user.planId.toUpperCase()}: ${remaining} left`, color: remaining < 10 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+
+    if (user.planId === 'business' && remaining <= 0) {
+      const overage = Math.abs(remaining);
+      return {
+        text: `BUSINESS: +${overage} Overage`,
+        color: 'bg-indigo-100 text-indigo-700 border-indigo-200 animate-pulse'
+      };
+    }
+
+    return {
+      text: `${user.planId.toUpperCase()}: ${remaining > 0 ? remaining : 0} left`,
+      color: remaining < 10 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    };
   };
   const badge = badgeInfo();
 
@@ -914,6 +927,7 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         user={user}
         onLogout={() => userService.logout().then(() => setUser(null))}
+        onUpdate={setUser}
       />
       <ConsentModal
         isOpen={!!user && !user.hasConsented}

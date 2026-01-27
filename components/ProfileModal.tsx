@@ -10,6 +10,7 @@ interface ProfileModalProps {
     onClose: () => void;
     user: UserProfile;
     onLogout: () => void;
+    onUpdate: (updatedUser: UserProfile) => void;
 }
 
 const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, answer }) => {
@@ -33,11 +34,15 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
     );
 };
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLogout }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLogout, onUpdate }) => {
     if (!isOpen) return null;
 
     const [editingLimit, setEditingLimit] = React.useState(false);
     const [tempLimit, setTempLimit] = React.useState<number | string>(user.customUsageLimit || '');
+
+    React.useEffect(() => {
+        setTempLimit(user.customUsageLimit || '');
+    }, [user.customUsageLimit]);
 
     const handleCustomerPortal = async () => {
         if (user.stripeCustomerId) {
@@ -52,12 +57,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                 alert("Limit cannot be less than the base (500).");
                 return;
             }
-            await userService.updateCustomLimit(user.id, val);
+            const updatedUser = await userService.updateCustomLimit(user.id, val);
+            onUpdate(updatedUser);
             setEditingLimit(false);
-            // Ideally notify parent/reload user, but let's assume optimist update or similar
-            // Since we don't have a callback to update user prop here easily without refetch, 
-            // we should technically call a refresh callback. 
-            // But for now, we'll just close edit mode. The changes stick in DB.
         } catch (e) {
             console.error(e);
             alert("Failed to update limit");
@@ -140,7 +142,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                                     {user.planId === 'business' && (
                                         <div className="bg-indigo-50/50 rounded-xl p-3 border border-indigo-100/50 mt-2">
                                             <div className="flex justify-between items-center">
-                                                <span className="text-xs font-bold text-indigo-700">Metered Usage Limit</span>
+                                                <span className="text-xs font-bold text-indigo-700">Total Usage Limit</span>
                                                 {!editingLimit ? (
                                                     <button onClick={() => setEditingLimit(true)} className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-700">Change Cap</button>
                                                 ) : (
@@ -164,8 +166,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                                                     Hard Cap: <span className="font-bold">{user.customUsageLimit ? user.customUsageLimit : 'None (Unlimited)'}</span>
                                                 </p>
                                             )}
-                                            <p className="text-[10px] text-slate-400 mt-1 leading-tight">
-                                                Overage charges ($0.05/doc) apply for usage above 500 up to your Hard Cap.
+                                            <p className="text-[10px] text-slate-400 mt-1 leading-tight font-medium">
+                                                Overage charges ($5 for every extra 100 receipts) apply for usage above 500 up to your Hard Cap.
                                             </p>
                                         </div>
                                     )}
