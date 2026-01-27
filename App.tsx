@@ -809,7 +809,9 @@ export default function App() {
                   <thead className="bg-slate-50/50">
                     <tr>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Merchant / ID</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Date</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Vendor Name</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt ID</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
@@ -837,12 +839,18 @@ export default function App() {
                           )}
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[80px] sm:max-w-none mb-0.5">{expense.vendorName}</p>
                           <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
-                          {expense.receiptId && (
-                            <div className="mt-1 px-1.5 py-0.5 bg-slate-100 rounded text-[8px] sm:text-[9px] font-black text-slate-500 inline-block">
-                              ID: {expense.receiptId}
-                            </div>
+                        </td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{expense.vendorName}</p>
+                        </td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                          {expense.receiptId ? (
+                            <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[8px] sm:text-[9px] font-black text-slate-500">
+                              {expense.receiptId}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-300">-</span>
                           )}
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
@@ -863,7 +871,7 @@ export default function App() {
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                        <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                           <Sparkles className="w-8 h-8 mb-2 mx-auto opacity-20" />
                           <p className="text-sm font-bold">Start tracking your claims and bookkeeping today.</p>
                         </td>
