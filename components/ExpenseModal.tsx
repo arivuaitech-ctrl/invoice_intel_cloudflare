@@ -45,8 +45,6 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         currency: defaultCurrency,
         category: ExpenseCategory.OTHERS,
         summary: '',
-        category: ExpenseCategory.OTHERS,
-        summary: '',
         portfolioId: defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : undefined),
         receiptId: '',
       });
@@ -60,10 +58,10 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     if (!formData.vendorName || !formData.amount) return;
 
     onSave({
-      id: initialData?.id || crypto.randomUUID(),
-      createdAt: initialData?.createdAt || Date.now(),
-      fileName: initialData?.fileName,
-      ...formData as ExpenseItem
+      ...formData as ExpenseItem,
+      id: initialData?.id || formData.id || crypto.randomUUID(),
+      createdAt: initialData?.createdAt || formData.createdAt || Date.now(),
+      fileName: initialData?.fileName || formData.fileName,
     });
     onClose();
   };
