@@ -18,7 +18,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
   try {
     const body: any = await context.request.json();
-    const { priceId, userId, userEmail, currency = 'myr', isMobile = false } = body;
+    const { priceId, userId, userEmail, currency = 'usd', isMobile = false } = body;
 
     const priceMap: Record<string, string | undefined> = {
       'basic': context.env.STRIPE_PRICE_ID_BASIC,
@@ -51,9 +51,10 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       payment_method_types: ['card'],
       line_items: [{
         price: stripePriceId,
-        quantity: 1
+        // For metered billing (Business plan), quantity should not be specified
+        quantity: priceId === 'business' ? undefined : 1
       }],
-      currency: currency.toLowerCase(), // Important: Specify currency for multi-currency prices
+      currency: currency.toLowerCase(),
       mode: 'subscription',
       success_url: successUrl,
       cancel_url: cancelUrl,
