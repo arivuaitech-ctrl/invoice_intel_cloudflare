@@ -25,7 +25,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
         // 1. Fetch Profile
         const { data: profile, error } = await supabase
             .from('profiles')
-            .select('subscription_item_id, last_billed_usage, custom_usage_limit')
+            .select('stripe_customer_id, last_billed_usage, custom_usage_limit')
             .eq('id', userId)
             .single();
 
@@ -33,10 +33,10 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
             return new Response(JSON.stringify({ error: "Profile not found" }), { status: 404 });
         }
 
-        const { subscription_item_id, last_billed_usage, custom_usage_limit } = profile;
+        const { stripe_customer_id, last_billed_usage, custom_usage_limit } = profile;
 
-        if (!subscription_item_id) {
-            return new Response(JSON.stringify({ ignored: true, reason: "No subscription item" }), { status: 200 });
+        if (!stripe_customer_id) {
+            return new Response(JSON.stringify({ ignored: true, reason: "No Stripe Customer ID" }), { status: 200 });
         }
 
         // 2. Check Custom Limit
@@ -44,33 +44,52 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
             return new Response(JSON.stringify({ error: "Custom usage limit exceeded" }), { status: 403 });
         }
 
-        // 3. New Logic: Report Total Usage Incrementally
-        // We trust Stripe's Tiered Logic (Per Unit / Graduated) to handle the pricing
-        // We simply report how many *new* items were added since last report.
-
-        // Fallback: If last_billed_usage > usage (e.g. manual reset?), we should report 0 or ignore?
-        // Stripe Usage API is additive (action='increment').
-        // So we need to calculate delta = usage - last_billed_usage.
+        // 3. New Logic: Use Stripe Billing Meters API
+        // We send events to Stripe whenever usage increases.
+        // The "Event Name" must match the one in your Stripe Dashboard.
 
         const previousBilled = last_billed_usage || 0;
         const delta = usage - previousBilled;
 
         if (delta > 0) {
-            console.log(`Report Usage for User ${userId}: Delta ${delta} (Total ${usage})`);
+            console.log(`Reporting Meter Event for User ${userId}: Delta ${delta} (Total ${usage})`);
 
-            const idempotencyKey = `usage_${subscription_item_id}_${usage}_${Date.now()}`;
+            // IDEMPOTENCY: We use a combination of userId and usage count to prevent double-counting if retried
+            const idempotencyKey = `meter_event_${userId}_${usage}`;
 
-            await stripe.subscriptionItems.createUsageRecord(
-                subscription_item_id,
-                {
-                    quantity: delta,
+            // Using the New Billing Meters Event API
+            // Note: In newer Stripe SDKs, this is under stripe.billing.meterEvents.create()
+            // For older SDK versions, we might need to use stripe.rawRequest or update dependency.
+            // But standard SDK should have it if relatively modern.
+
+            try {
+                await stripe.billing.meterEvents.create(
+                    {
+                        event_name: 'Invoice_Coutner', // EXACT match from Stripe Dashboard
+                        payload: {
+                            stripe_customer_id: stripe_customer_id,
+                            value: delta.toString(),
+                        },
+                        timestamp: Math.floor(Date.now() / 1000),
+                    },
+                    {
+                        idempotencyKey
+                    }
+                );
+            } catch (meterError: any) {
+                console.error("Meter Event API Error:", meterError.message);
+                // Fallback for older SDK versions if meterEvents is not available
+                await stripe.rawRequest('POST', '/v1/billing/meter_events', {
+                    event_name: 'Invoice_Coutner',
+                    payload: {
+                        stripe_customer_id: stripe_customer_id,
+                        value: delta.toString(),
+                    },
                     timestamp: Math.floor(Date.now() / 1000),
-                    action: 'increment',
-                },
-                {
-                    idempotencyKey
-                }
-            );
+                }, {
+                    idempotencyKey: idempotencyKey
+                });
+            }
 
             // Update Database
             const { error: updateError } = await supabase
