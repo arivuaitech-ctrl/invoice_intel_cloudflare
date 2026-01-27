@@ -293,13 +293,12 @@ export const userService = {
     // Let's delegate this logic to the backend to keep client secret safe.
 
     // 2. Report Usage to API for Block Billing ($5 / 100 extra)
-    // We send total usage, backend calculates if a new block is crossed.
     if (user.planId === 'business' && user.subscriptionItemId) {
-      const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
+      console.log(`[UserService] Reporting usage for business user. Count: ${newCount}, SubItemID: ${user.subscriptionItemId}`);
 
-      // Fire and forget (or better, optimize to ensure it completes?)
-      // Actually, we should probably await this if billing is critical.
-      // But for UX speed, maybe fire & log error.
+      const API_BASE_URL = Capacitor.isNativePlatform()
+        ? ((import.meta as any).env?.VITE_API_URL || '')
+        : '';
 
       fetch(`${API_BASE_URL}/api/report-usage`, {
         method: 'POST',
@@ -308,7 +307,11 @@ export const userService = {
           userId: user.id,
           usage: newCount
         })
+      }).then(res => {
+        console.log(`[UserService] Report Usage Response:`, res.status);
       }).catch(e => console.error("Billing Report Failed:", e));
+    } else {
+      console.log(`[UserService] Omit reporting. Plan: ${user.planId}, SubItem: ${user.subscriptionItemId}`);
     }
 
     return mapProfile(data);
