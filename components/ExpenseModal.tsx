@@ -101,6 +101,17 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Receipt / Invoice ID <span className="text-slate-400 font-normal">(Optional)</span></label>
+                <input
+                  type="text"
+                  className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2 bg-white text-slate-900"
+                  value={formData.receiptId || ''}
+                  onChange={(e) => setFormData({ ...formData, receiptId: e.target.value })}
+                  placeholder="e.g. INV-2023-001"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700">Date</label>
