@@ -30,6 +30,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     category: ExpenseCategory.OTHERS,
     summary: '',
     portfolioId: undefined,
+    receiptId: '',
   });
 
   useEffect(() => {
@@ -44,7 +45,10 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         currency: defaultCurrency,
         category: ExpenseCategory.OTHERS,
         summary: '',
+        category: ExpenseCategory.OTHERS,
+        summary: '',
         portfolioId: defaultPortfolioId || (portfolios.length > 0 ? portfolios[0].id : undefined),
+        receiptId: '',
       });
     }
   }, [initialData, isOpen, portfolios, defaultPortfolioId]);

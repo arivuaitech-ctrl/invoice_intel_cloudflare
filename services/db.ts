@@ -76,6 +76,7 @@ const mapToDb = (item: ExpenseItem, userId?: string) => {
     file_name: item.fileName,
     // image_data: item.imageData, // REMOVED FOR PDPA COMPLIANCE
     portfolio_id: item.portfolioId,
+    receipt_id: item.receiptId,
     created_at: item.createdAt
   };
 
@@ -97,6 +98,7 @@ const mapFromDb = (data: any): ExpenseItem => ({
   fileName: data.file_name,
   imageData: undefined, // Will be hydrated from local storage
   portfolioId: data.portfolio_id,
+  receiptId: data.receipt_id,
   createdAt: data.created_at
 });
 

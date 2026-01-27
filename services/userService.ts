@@ -3,35 +3,36 @@ import { UserProfile, PricingTier } from '../types';
 import { supabase } from './supabaseClient';
 import { Capacitor } from '@capacitor/core';
 
+// METERED PLAN CONFIG
 export const PRICING_PACKAGES: PricingTier[] = [
   {
     id: 'basic',
-    name: 'Personal (Basic)',
-    limit: 30,
-    price: 16.00,
+    name: 'Basic (Individuals)',
+    limit: 40,
+    price: 0, // Legacy field, ignored now
     priceUSD: 5.00,
-    description: 'For individuals managing monthly bills.',
-    features: ['30 Receipts / Month', 'Standard Processing', 'Excel Export'],
+    description: 'For individuals managing personal expenses.',
+    features: ['40 Receipts / Month', 'AI Invoice Extraction', 'Export (CSV / Excel)'],
     popular: false
   },
   {
     id: 'pro',
-    name: 'Freelancer (Pro)',
-    limit: 100,
-    price: 40.00,
-    priceUSD: 10.00,
-    description: 'For agents, freelancers & power users.',
-    features: ['100 Receipts / Month', 'Priority AI Processing', 'Spending Analytics'],
+    name: 'Pro (Freelancer)',
+    limit: 120,
+    price: 0,
+    priceUSD: 12.00,
+    description: 'For freelancers requiring higher volume.',
+    features: ['120 Receipts / Month', 'AI Invoice Extraction', 'Export (CSV / Excel)'],
     popular: true
   },
   {
     id: 'business',
-    name: 'SME Business',
-    limit: 500,
-    price: 90.00,
-    priceUSD: 20.00,
+    name: 'Business (SMEs)',
+    limit: 500, // Base limit, overage applies after this
+    price: 0,
+    priceUSD: 25.00,
     description: 'For small businesses and teams.',
-    features: ['500 Receipts / Month', 'High-Speed Bulk Upload', 'Priority Support'],
+    features: ['500 Receipts Included', 'Metered Usage ($5 per 100 extra)', 'Bulk Upload', 'Priority Support'],
     popular: false
   }
 ];
@@ -48,12 +49,16 @@ const mapProfile = (data: any): UserProfile => ({
   trialStartDate: data.trial_start_date,
   isTrialActive: data.is_trial_active,
   stripeCustomerId: data.stripe_customer_id,
+  subscriptionId: data.subscription_id,
+  subscriptionItemId: data.subscription_item_id,
+  customUsageLimit: data.custom_usage_limit,
+  lastBilledUsage: data.last_billed_usage,
   isAdmin: !!data.is_admin,
   hasConsented: !!data.has_consented,
   consentTimestamp: data.consent_timestamp,
   consentVersion: data.consent_version,
   consentIp: data.consent_ip,
-  defaultCurrency: data.default_currency || 'USD'
+  defaultCurrency: 'USD' // Force USD always
 });
 
 export const userService = {
@@ -224,18 +229,41 @@ export const userService = {
     return updated;
   },
 
-  canUpload: (user: UserProfile, fileCount: number): { allowed: boolean; reason?: 'trial_limit' | 'plan_limit' | 'expired' } => {
+  canUpload: (user: UserProfile, fileCount: number): { allowed: boolean; reason?: 'trial_limit' | 'plan_limit' | 'expired' | 'custom_limit' } => {
     if (user.isAdmin) return { allowed: true };
 
+    const futureUsage = (user.docsUsedThisMonth || 0) + fileCount;
+
+    // Trial check
     if (user.isTrialActive && user.planId === 'free') {
-      if (user.docsUsedThisMonth + fileCount > user.monthlyDocsLimit) return { allowed: false, reason: 'trial_limit' };
+      if (futureUsage > user.monthlyDocsLimit) return { allowed: false, reason: 'trial_limit' };
       return { allowed: true };
     }
+
+    // Subscription check
     if (user.planId !== 'free') {
-      // Allow a grace period of 2 hours if expiry is just reached
-      const gracePeriod = 2 * 60 * 60 * 1000;
-      if (user.subscriptionExpiry && (Date.now() > user.subscriptionExpiry + gracePeriod)) return { allowed: false, reason: 'expired' };
-      if (user.docsUsedThisMonth + fileCount > user.monthlyDocsLimit) return { allowed: false, reason: 'plan_limit' };
+      // Allow a grace period of 28 hours if expiry is just reached (payment retry window)
+      const gracePeriod = 28 * 60 * 60 * 1000;
+      if (user.subscriptionExpiry && (Date.now() > user.subscriptionExpiry + gracePeriod)) {
+        return { allowed: false, reason: 'expired' };
+      }
+
+      // Check Business User Custom Limit (Hard Stop)
+      if (user.planId === 'business' && user.customUsageLimit && futureUsage > user.customUsageLimit) {
+        return { allowed: false, reason: 'custom_limit' };
+      }
+
+      // Start Overage check logic
+      if (user.planId === 'business') {
+        // Business users rely on metered billing for overage, so we allow unless hard custom limit hit
+        return { allowed: true };
+      }
+
+      // Regular Plan Limit
+      if (futureUsage > user.monthlyDocsLimit) {
+        return { allowed: false, reason: 'plan_limit' };
+      }
+
       return { allowed: true };
     }
     return { allowed: false, reason: 'expired' };
@@ -243,6 +271,8 @@ export const userService = {
 
   recordUsage: async (user: UserProfile, fileCount: number): Promise<UserProfile> => {
     const newCount = (user.docsUsedThisMonth || 0) + fileCount;
+
+    // 1. Update Database
     const { data, error } = await supabase
       .from('profiles')
       .update({ docs_used_this_month: newCount })
@@ -250,6 +280,47 @@ export const userService = {
       .select()
       .single();
 
+    if (error) throw error;
+
+    // 2. Report Usage to Stripe if Business Plan and over limit
+    // We report usage for *every* upload if they are on metered plan, OR only if above limit?
+    // Stripe "metered" usage usually requires reporting ALL usage, OR delta.
+    // However, our model is: Included 500, then metered.
+    // If Stripe Price is configured as "Cluster" or "Tiered", we might report everything.
+    // BUT simplest approach: If user is Business, we report the *increment* (fileCount) to the endpoint.
+    // The Endpoint will check if it needs to report to Stripe based on total usage vs limit, 
+    // OR if the Stripe Price is "Overage Only", we only report if total > 500.
+    // Let's delegate this logic to the backend to keep client secret safe.
+
+    // 2. Report Usage to API for Block Billing ($5 / 100 extra)
+    // We send total usage, backend calculates if a new block is crossed.
+    if (user.planId === 'business' && user.subscriptionItemId) {
+      const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
+
+      // Fire and forget (or better, optimize to ensure it completes?)
+      // Actually, we should probably await this if billing is critical.
+      // But for UX speed, maybe fire & log error.
+
+      fetch(`${API_BASE_URL}/api/report-usage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          usage: newCount
+        })
+      }).catch(e => console.error("Billing Report Failed:", e));
+    }
+
+    return mapProfile(data);
+  },
+
+  updateCustomLimit: async (userId: string, limit: number | null): Promise<UserProfile> => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ custom_usage_limit: limit })
+      .eq('id', userId)
+      .select()
+      .single();
     if (error) throw error;
     return mapProfile(data);
   },

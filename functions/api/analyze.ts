@@ -24,6 +24,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
                 date: { type: "STRING", description: "Date of transaction in YYYY-MM-DD format" },
                 amount: { type: "NUMBER", description: "Total amount paid (numeric)" },
                 currency: { type: "STRING", description: "Currency code (e.g., MYR, USD, RM)" },
+                receiptId: { type: "STRING", description: "Receipt Number, Invoice Number, or Transaction ID if visible. Leave empty if not found." },
                 category: {
                     type: "STRING",
                     enum: [
@@ -44,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             contents: {
                 parts: [
                     { inlineData: { mimeType: mimeType, data: image } },
-                    { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, and categorize it based on the provided schema. If the date is not clear, use today's date." }
+                    { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, receipt/invoice number (as receiptId), and categorize it based on the provided schema. If the date is not clear, use today's date." }
                 ]
             },
             config: {

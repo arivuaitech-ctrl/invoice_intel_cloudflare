@@ -835,9 +835,9 @@ export default function App() {
                             </div>
                           )}
                         </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
                           <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[80px] sm:max-w-none">{expense.vendorName}</p>
+                          {expense.receiptId && <p className="text-[9px] text-slate-400 truncate max-w-[100px]">#{expense.receiptId}</p>}
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
@@ -942,27 +942,27 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-[60] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <button
-          onClick={() => setView('expenses')}
-          className={`flex flex-col items-center gap-1 transition-colors ${view === 'expenses' ? 'text-indigo-600' : 'text-slate-400'}`}
-        >
-          <div className={`p-1.5 rounded-xl ${view === 'expenses' ? 'bg-indigo-50' : ''}`}>
-            <List className="w-6 h-6" />
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-wider">List</span>
-        </button>
-        <button
-          onClick={() => setView('analytics')}
-          className={`flex flex-col items-center gap-1 transition-colors ${view === 'analytics' ? 'text-indigo-600' : 'text-slate-400'}`}
-        >
-          <div className={`p-1.5 rounded-xl ${view === 'analytics' ? 'bg-indigo-50' : ''}`}>
-            <PieChartIcon className="w-6 h-6" />
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-wider">Insights</span>
-        </button>
+      {/* Mobile Bottom Navigation */ }
+  <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-3 flex justify-around items-center z-[60] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <button
+      onClick={() => setView('expenses')}
+      className={`flex flex-col items-center gap-1 transition-colors ${view === 'expenses' ? 'text-indigo-600' : 'text-slate-400'}`}
+    >
+      <div className={`p-1.5 rounded-xl ${view === 'expenses' ? 'bg-indigo-50' : ''}`}>
+        <List className="w-6 h-6" />
       </div>
-    </div>
+      <span className="text-[10px] font-black uppercase tracking-wider">List</span>
+    </button>
+    <button
+      onClick={() => setView('analytics')}
+      className={`flex flex-col items-center gap-1 transition-colors ${view === 'analytics' ? 'text-indigo-600' : 'text-slate-400'}`}
+    >
+      <div className={`p-1.5 rounded-xl ${view === 'analytics' ? 'bg-indigo-50' : ''}`}>
+        <PieChartIcon className="w-6 h-6" />
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-wider">Insights</span>
+    </button>
+  </div>
+    </div >
   );
 }

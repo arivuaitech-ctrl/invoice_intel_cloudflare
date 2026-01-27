@@ -36,6 +36,7 @@ export interface ExpenseItem {
   fileName?: string;
   imageData?: string; // Base64 string of the receipt image
   portfolioId?: string; // Optional: Link to a portfolio/page
+  receiptId?: string; // Extracted Receipt/Invoice Number
 }
 
 export interface Stats {
@@ -71,6 +72,10 @@ export interface UserProfile {
   trialStartDate: number;
   isTrialActive: boolean;
   stripeCustomerId?: string; // Added to handle portal redirects
+  subscriptionId?: string; // NEW: active Stripe Subscription ID
+  subscriptionItemId?: string; // NEW: active Stripe Subscription Item ID for Metered Usage
+  customUsageLimit?: number; // NEW: user-defined hard cap (Business Only)
+  lastBilledUsage?: number; // NEW: Tracks usage already billed (to handle block logic)
   isAdmin?: boolean; // New: admin bypass
   hasConsented?: boolean; // New: informed consent tracking
   consentTimestamp?: number | null; // New: when they consented

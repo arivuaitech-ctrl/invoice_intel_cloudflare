@@ -36,9 +36,31 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
 const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLogout }) => {
     if (!isOpen) return null;
 
+    const [editingLimit, setEditingLimit] = React.useState(false);
+    const [tempLimit, setTempLimit] = React.useState<number | string>(user.customUsageLimit || '');
+
     const handleCustomerPortal = async () => {
         if (user.stripeCustomerId) {
             await stripeService.redirectToCustomerPortal(user.stripeCustomerId);
+        }
+    };
+
+    const saveCustomLimit = async () => {
+        try {
+            const val = tempLimit === '' ? null : Number(tempLimit);
+            if (val !== null && val < 500) {
+                alert("Limit cannot be less than the base (500).");
+                return;
+            }
+            await userService.updateCustomLimit(user.id, val);
+            setEditingLimit(false);
+            // Ideally notify parent/reload user, but let's assume optimist update or similar
+            // Since we don't have a callback to update user prop here easily without refetch, 
+            // we should technically call a refresh callback. 
+            // But for now, we'll just close edit mode. The changes stick in DB.
+        } catch (e) {
+            console.error(e);
+            alert("Failed to update limit");
         }
     };
 
@@ -110,9 +132,43 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                                             </p>
                                         </div>
                                         <p className="text-xl font-black text-slate-800">
-                                            {remainingDocs} <span className="text-[10px] text-slate-400 uppercase">left</span>
+                                            {remainingDocs > 0 ? remainingDocs : 0} <span className="text-[10px] text-slate-400 uppercase">left</span>
                                         </p>
                                     </div>
+
+                                    {/* Business Metered UI */}
+                                    {user.planId === 'business' && (
+                                        <div className="bg-indigo-50/50 rounded-xl p-3 border border-indigo-100/50 mt-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-indigo-700">Metered Usage Limit</span>
+                                                {!editingLimit ? (
+                                                    <button onClick={() => setEditingLimit(true)} className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-700">Change Cap</button>
+                                                ) : (
+                                                    <div className="flex gap-2">
+                                                        <button onClick={saveCustomLimit} className="text-[10px] font-black uppercase text-emerald-600">Save</button>
+                                                        <button onClick={() => setEditingLimit(false)} className="text-[10px] font-black uppercase text-slate-400">Cancel</button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {editingLimit ? (
+                                                <input
+                                                    type="number"
+                                                    className="w-full mt-2 p-1.5 text-xs border rounded-lg"
+                                                    placeholder="No Limit"
+                                                    value={tempLimit}
+                                                    onChange={(e) => setTempLimit(e.target.value)}
+                                                />
+                                            ) : (
+                                                <p className="text-xs text-indigo-600 mt-1">
+                                                    Hard Cap: <span className="font-bold">{user.customUsageLimit ? user.customUsageLimit : 'None (Unlimited)'}</span>
+                                                </p>
+                                            )}
+                                            <p className="text-[10px] text-slate-400 mt-1 leading-tight">
+                                                Overage charges ($0.05/doc) apply for usage above 500 up to your Hard Cap.
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
                                         <div

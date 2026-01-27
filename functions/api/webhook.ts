@@ -9,35 +9,29 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
 }
 
-const updateProfile = async (env: Env, userId: string, planId: string, customerId: string) => {
+const updateProfile = async (env: Env, userId: string, planId: string, customerId: string, subId?: string, subItemId?: string) => {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+  const limits: Record<string, number> = { 'basic': 40, 'pro': 120, 'business': 500 };
 
-  const limits: Record<string, number> = {
-    'basic': 30,
-    'pro': 100,
-    'business': 500
+  const updates: any = {
+    plan_id: planId,
+    is_trial_active: false,
+    subscription_expiry: Date.now() + (31 * 24 * 60 * 60 * 1000),
+    stripe_customer_id: customerId,
+    monthly_docs_limit: limits[planId] || 100,
   };
 
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      plan_id: planId,
-      is_trial_active: false,
-      subscription_expiry: Date.now() + (31 * 24 * 60 * 60 * 1000),
-      stripe_customer_id: customerId,
-      monthly_docs_limit: limits[planId] || 100,
-      docs_used_this_month: 0
-    })
-    .eq('id', userId)
-    .select();
+  if (subId) updates.subscription_id = subId;
+  if (subItemId) updates.subscription_item_id = subItemId;
+
+  // If this is a new subscription, we might want to reset the usage count?
+  // Safest to NOT reset here if it's an existing user upgrading mid-month unless we want to grant full quota immediately.
+  // For now, we only update the limit. The monthly reset handles the zeroing.
+
+  const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
 
   if (error) {
     console.error("Webhook Supabase Error:", error);
-    return false;
-  }
-
-  if (!data || data.length === 0) {
-    console.warn(`Webhook Warn: Profile for ID ${userId} not found in database. Nothing updated.`);
     return false;
   }
   return true;
@@ -70,31 +64,54 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       const userId = session.metadata?.userId;
       const planId = session.metadata?.planId || 'pro';
       const customerId = session.customer as string;
+      const subscriptionId = session.subscription as string;
 
-      console.log(`Webhook: Processing Checkout ${session.id}. User: ${userId}, Plan: ${planId}`);
+      console.log(`Webhook: Checkout ${session.id}. User: ${userId}, Plan: ${planId}`);
 
       if (userId) {
-        const success = await updateProfile(context.env, userId, planId, customerId);
-        console.log(`Webhook: Profile update success: ${success}`);
-      } else {
-        console.warn("Webhook: Missing userId in metadata!");
+        // Fetch subscription to get items logic
+        let subItemId = undefined;
+        if (subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            const meteredItem = sub.items.data.find(item => item.price.recurring?.usage_type === 'metered');
+            subItemId = meteredItem ? meteredItem.id : sub.items.data[0]?.id;
+          } catch (e) {
+            console.error("Failed to retrieve sub details:", e);
+          }
+        }
+        await updateProfile(context.env, userId, planId, customerId, subscriptionId, subItemId);
       }
     }
 
     if (stripeEvent.type === 'customer.subscription.created') {
+      // logic merged into checkout.session.completed usually, but good fallback
       const subscription = stripeEvent.data.object as Stripe.Subscription;
-      const customerId = subscription.customer as string;
-      console.log(`Webhook: Processing Subscription ${subscription.id} for Customer ${customerId}`);
+      console.log(`Webhook: Sub Created ${subscription.id}`);
+      // We skip doing the heavy lifting here as checkout.session.completed covers the metadata mapping better usually
+      // unless this is a renewal/update? specific logic can be added if needed.
+    }
 
-      const sessions = await stripe.checkout.sessions.list({ customer: customerId, limit: 1 });
-      if (sessions.data.length > 0) {
-        const session = sessions.data[0];
-        const userId = session.metadata?.userId;
-        const planId = session.metadata?.planId || 'pro';
-        if (userId) {
-          const success = await updateProfile(context.env, userId, planId, customerId);
-          console.log(`Webhook: Profile update success (via sub created): ${success}`);
-        }
+    if (stripeEvent.type === 'invoice.payment_succeeded') {
+      const invoice = stripeEvent.data.object as Stripe.Invoice;
+      const customerId = invoice.customer as string;
+      const subscriptionId = invoice.subscription as string;
+
+      if (invoice.billing_reason === 'subscription_cycle') {
+        console.log(`Webhook: Monthly Reset for Customer ${customerId}`);
+        const supabase = createClient(context.env.SUPABASE_URL, context.env.SUPABASE_SERVICE_ROLE_KEY);
+
+        // Reset usage and extend expiry
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            docs_used_this_month: 0,
+            last_billed_usage: 0,
+            subscription_expiry: Date.now() + (31 * 24 * 60 * 60 * 1000)
+          })
+          .eq('stripe_customer_id', customerId);
+
+        if (error) console.error("Weekly Reset Error:", error);
       }
     }
 
