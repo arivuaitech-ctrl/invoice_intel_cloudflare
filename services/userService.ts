@@ -32,7 +32,7 @@ export const PRICING_PACKAGES: PricingTier[] = [
     price: 0,
     priceUSD: 25.00,
     description: 'For small businesses and teams.',
-    features: ['500 Receipts Included', 'Metered Usage ($5 per 100 extra)', 'Bulk Upload', 'Priority Support'],
+    features: ['500 Receipts Included', 'Metered Usage ($5 per 100 extra)', 'Bulk Upload', '$10 One-time Setup Fee', 'Priority Support'],
     popular: false
   }
 ];

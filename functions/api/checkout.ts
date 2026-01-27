@@ -6,6 +6,7 @@ interface Env {
   STRIPE_PRICE_ID_BASIC: string;
   STRIPE_PRICE_ID_PRO: string;
   STRIPE_PRICE_ID_BUSINESS: string;
+  STRIPE_PRICE_ID_BUSINESS_DEPOSIT: string;
   SITE_URL: string;
 }
 
@@ -35,6 +36,25 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
       );
     }
 
+    const lineItems: any[] = [
+      {
+        price: stripePriceId,
+        // For metered billing (Business plan), quantity should not be specified
+        quantity: priceId === 'business' ? undefined : 1
+      }
+    ];
+
+    // Add Security Deposit for Business Plan
+    if (priceId === 'business') {
+      const depositPriceId = context.env.STRIPE_PRICE_ID_BUSINESS_DEPOSIT;
+      if (depositPriceId && depositPriceId.startsWith('price_')) {
+        lineItems.push({
+          price: depositPriceId,
+          quantity: 1 // One-time charge
+        });
+      }
+    }
+
     const origin = new URL(context.request.url).origin;
     const cleanBaseUrl = context.env.SITE_URL || origin;
 
@@ -49,11 +69,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      line_items: [{
-        price: stripePriceId,
-        // For metered billing (Business plan), quantity should not be specified
-        quantity: priceId === 'business' ? undefined : 1
-      }],
+      line_items: lineItems,
       currency: currency.toLowerCase(),
       mode: 'subscription',
       success_url: successUrl,
