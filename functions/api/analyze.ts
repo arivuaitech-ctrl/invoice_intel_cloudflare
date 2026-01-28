@@ -35,7 +35,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
                     ],
                     description: "Select the most appropriate category for tax filing/claims"
                 },
-                summary: { type: "STRING", description: "Contextual detail based on category (e.g., Parking: 'Taman Desa', Transport: 'KL to PJ', Medical: 'Fever treatment', Utility: 'Water Bill - Jan'). Leave empty if not clearly visible." }
+                summary: { type: "STRING", description: "Clear, layman-friendly purpose of the expense. Exclude dates. Include multiple details if relevant (e.g., 'Parking at Pavillion - Business Meeting', 'Medical: Fever & Consultation', 'Grab: Office to Client Site')." }
             },
             required: ["vendorName", "date", "amount", "category"]
         };
@@ -45,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             contents: {
                 parts: [
                     { inlineData: { mimeType: mimeType, data: image } },
-                    { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, receipt/invoice number (as receiptId), and categorize it based on the provided schema. For the summary, provide relevant context based on the category (e.g., for Parking: location; for Transport: route/destination; for Medical: purpose/condition; for Utility: month/unit). If specific context is not visible, leave it empty. If the date is not clear, use today's date." }
+                    { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, receipt/invoice number (as receiptId), and categorize it based on the provided schema. For the summary, provide multiple contextual details that make the purpose clear to a layman. DO NOT include the date as it's already extracted elsewhere. Be specific (e.g., Parking location + reason if possible, Transport start/end points + purpose, Medical condition + type of service). If specific context is not visible, leave it empty. If the date is not clear, use today's date." }
                 ]
             },
             config: {
