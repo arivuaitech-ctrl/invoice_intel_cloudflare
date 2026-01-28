@@ -49,13 +49,19 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
         // The "Event Name" must match the one in your Stripe Dashboard.
 
         const previousBilled = last_billed_usage || 0;
-        const delta = usage - previousBilled;
+        let delta = usage - previousBilled;
+
+        // Safety: If usage is somehow lower than last billed, don't report negative delta
+        if (delta < 0) {
+            console.warn(`[ReportUsage] Usage (${usage}) is lower than last billed (${previousBilled}) for user ${userId}. Syncing to total.`);
+            delta = usage; // Report current total as the new event to reset sync
+        }
 
         if (delta > 0) {
             console.log(`Reporting Meter Event for User ${userId}: Delta ${delta} (Total ${usage})`);
 
             const eventName = (context.env as any).STRIPE_METER_EVENT_NAME || 'invoice_counter';
-            const idempotencyKey = `meter_event_${userId}_${usage}`;
+            const idempotencyKey = `meter_event_${userId}_${usage}_${Date.now()}`;
 
             try {
                 await stripe.billing.meterEvents.create(
