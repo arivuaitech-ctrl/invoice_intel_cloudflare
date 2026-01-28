@@ -49,16 +49,10 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
         // The "Event Name" must match the one in your Stripe Dashboard.
 
         const previousBilled = last_billed_usage || 0;
-        let delta = usage - previousBilled;
 
-        // Safety: If usage is somehow lower than last billed, don't report negative delta
-        if (delta < 0) {
-            console.warn(`[ReportUsage] Usage (${usage}) is lower than last billed (${previousBilled}) for user ${userId}. Syncing to total.`);
-            delta = usage; // Report current total as the new event to reset sync
-        }
-
-        if (delta > 0) {
-            console.log(`Reporting Meter Event for User ${userId}: Delta ${delta} (Total ${usage})`);
+        // Report every time usage changes (increases)
+        if (usage !== previousBilled) {
+            console.log(`Reporting Total Usage for User ${userId}: ${usage}`);
 
             const eventName = (context.env as any).STRIPE_METER_EVENT_NAME || 'invoice_counter';
             const idempotencyKey = `meter_event_${userId}_${usage}_${Date.now()}`;
@@ -69,7 +63,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
                         event_name: eventName,
                         payload: {
                             stripe_customer_id: stripe_customer_id,
-                            value: delta.toString(),
+                            value: usage.toString(),
                         },
                         timestamp: Math.floor(Date.now() / 1000),
                     },
@@ -84,7 +78,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
                     event_name: eventName,
                     payload: {
                         stripe_customer_id: stripe_customer_id,
-                        value: delta.toString(),
+                        value: usage.toString(),
                     },
                     timestamp: Math.floor(Date.now() / 1000),
                 }, {
@@ -100,7 +94,7 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
 
             if (updateError) console.error("Failed to update last_billed_usage:", updateError);
 
-            return new Response(JSON.stringify({ reported: true, delta }), { status: 200 });
+            return new Response(JSON.stringify({ reported: true, totalUsage: usage }), { status: 200 });
         } else {
             return new Response(JSON.stringify({ reported: false, reason: "No new usage" }), { status: 200 });
         }
