@@ -54,18 +54,13 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
         if (delta > 0) {
             console.log(`Reporting Meter Event for User ${userId}: Delta ${delta} (Total ${usage})`);
 
-            // IDEMPOTENCY: We use a combination of userId and usage count to prevent double-counting if retried
+            const eventName = (context.env as any).STRIPE_METER_EVENT_NAME || 'invoice_counter';
             const idempotencyKey = `meter_event_${userId}_${usage}`;
-
-            // Using the New Billing Meters Event API
-            // Note: In newer Stripe SDKs, this is under stripe.billing.meterEvents.create()
-            // For older SDK versions, we might need to use stripe.rawRequest or update dependency.
-            // But standard SDK should have it if relatively modern.
 
             try {
                 await stripe.billing.meterEvents.create(
                     {
-                        event_name: 'Invoice_Coutner', // EXACT match from Stripe Dashboard
+                        event_name: eventName,
                         payload: {
                             stripe_customer_id: stripe_customer_id,
                             value: delta.toString(),
@@ -78,9 +73,9 @@ export async function onRequestPost(context: { env: Env; request: Request }) {
                 );
             } catch (meterError: any) {
                 console.error("Meter Event API Error:", meterError.message);
-                // Fallback for older SDK versions if meterEvents is not available
+                // Fallback for older SDK versions
                 await stripe.rawRequest('POST', '/v1/billing/meter_events', {
-                    event_name: 'Invoice_Coutner',
+                    event_name: eventName,
                     payload: {
                         stripe_customer_id: stripe_customer_id,
                         value: delta.toString(),
