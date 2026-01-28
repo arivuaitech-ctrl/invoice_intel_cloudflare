@@ -35,7 +35,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
                     ],
                     description: "Select the most appropriate category for tax filing/claims"
                 },
-                summary: { type: "STRING", description: "Brief description of the purchase" }
+                summary: { type: "STRING", description: "Contextual detail based on category (e.g., Parking: 'Taman Desa', Transport: 'KL to PJ', Medical: 'Fever treatment', Utility: 'Water Bill - Jan'). Leave empty if not clearly visible." }
             },
             required: ["vendorName", "date", "amount", "category"]
         };
@@ -45,7 +45,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             contents: {
                 parts: [
                     { inlineData: { mimeType: mimeType, data: image } },
-                    { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, receipt/invoice number (as receiptId), and categorize it based on the provided schema. If the date is not clear, use today's date." }
+                    { text: "Analyze the attached receipt or invoice. Extract the merchant name, date, total amount, currency, receipt/invoice number (as receiptId), and categorize it based on the provided schema. For the summary, provide relevant context based on the category (e.g., for Parking: location; for Transport: route/destination; for Medical: purpose/condition; for Utility: month/unit). If specific context is not visible, leave it empty. If the date is not clear, use today's date." }
                 ]
             },
             config: {

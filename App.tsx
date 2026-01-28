@@ -844,6 +844,7 @@ export default function App() {
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Date</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Vendor Name</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Summary</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt ID</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
                       <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
@@ -875,7 +876,10 @@ export default function App() {
                           <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{expense.vendorName}</p>
+                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{expense.vendorName || '-'}</p>
+                        </td>
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                          <p className="text-[10px] sm:text-xs text-slate-500 italic truncate max-w-[150px] sm:max-w-[200px]">{expense.summary || '-'}</p>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           {expense.receiptId ? (
