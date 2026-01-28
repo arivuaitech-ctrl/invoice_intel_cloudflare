@@ -592,22 +592,42 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 overflow-x-hidden w-full touch-pan-y">
       {/* Bridge Overlay */}
-      {new URLSearchParams(window.location.search).get('mode') === 'mobile_bridge' && (
-        <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
-          </div>
-          <h2 className="text-2xl font-black text-slate-900 mb-2">Payment Completed</h2>
-          <p className="text-slate-500 mb-8">Your transaction was processed successfully.</p>
+      {(() => {
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('mode');
+        const payment = params.get('payment');
 
-          <a
-            href={`com.arivuaitech.invoiceintel://payment/success?${new URLSearchParams(window.location.search).toString()}`}
-            className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg shadow-xl shadow-indigo-200"
-          >
-            Return to App
-          </a>
-        </div>
-      )}
+        if (mode !== 'mobile_bridge') return null;
+
+        const isSuccess = payment === 'success';
+
+        return (
+          <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 text-center">
+            <div className={`w-20 h-20 ${isSuccess ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center mb-6`}>
+              {isSuccess ? (
+                <CheckCircle2 className="w-10 h-10 text-green-600" />
+              ) : (
+                <X className="w-10 h-10 text-red-600" />
+              )}
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-2">
+              {isSuccess ? 'Payment Completed' : 'Payment Cancelled'}
+            </h2>
+            <p className="text-slate-500 mb-8">
+              {isSuccess
+                ? 'Your transaction was processed successfully.'
+                : 'The payment process was cancelled.'}
+            </p>
+
+            <a
+              href={`com.arivuaitech.invoiceintel://${isSuccess ? 'payment/success' : 'payment/cancelled'}?${params.toString()}`}
+              className={`w-full py-4 ${isSuccess ? 'bg-indigo-600' : 'bg-slate-800'} text-white rounded-xl font-bold text-lg shadow-xl ${isSuccess ? 'shadow-indigo-200' : 'shadow-slate-200'}`}
+            >
+              Return to App
+            </a>
+          </div>
+        );
+      })()}
 
       {isGeminiKeyMissing && (
         <div className="bg-amber-500 text-white animate-slideDown shadow-md relative z-50">

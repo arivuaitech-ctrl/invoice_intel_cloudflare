@@ -7,12 +7,12 @@ export const stripeService = {
   /**
    * Redirects the user to a real Stripe Checkout page hosted on Cloudflare Pages Functions.
    */
-  redirectToCheckout: async (user: UserProfile, packageId: string, currency: string = 'myr'): Promise<void> => {
+  redirectToCheckout: async (user: UserProfile, packageId: string, currency: string = 'usd'): Promise<void> => {
     const pkg = PRICING_PACKAGES.find(p => p.id === packageId);
     if (!pkg) throw new Error("Invalid package selected");
 
     try {
-      const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
+      const API_BASE_URL = Capacitor.isNativePlatform() ? ((import.meta as any).env?.VITE_API_URL || '') : '';
       const response = await fetch(`${API_BASE_URL}/api/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,7 +50,7 @@ export const stripeService = {
    */
   redirectToCustomerPortal: async (customerId: string): Promise<void> => {
     try {
-      const API_BASE_URL = Capacitor.isNativePlatform() ? (process.env.VITE_API_URL || '') : '';
+      const API_BASE_URL = Capacitor.isNativePlatform() ? ((import.meta as any).env?.VITE_API_URL || '') : '';
       const response = await fetch(`${API_BASE_URL}/api/customer-portal`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
