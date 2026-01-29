@@ -13,6 +13,7 @@ import {
 import { ExpenseItem, Stats, SortField, SortOrder, ExpenseCategory, BudgetMap, MultiScopeBudget, UserProfile, Portfolio } from './types';
 import { db } from './services/db';
 import { extractInvoiceData, fileToGenerativePart } from './services/geminiService';
+import { validatePdfLimits, splitPdfIntoPages, isPDF } from './services/pdfService';
 import { userService } from './services/userService';
 import { stripeService } from './services/stripeService';
 import { supabase } from './services/supabaseClient';
@@ -314,25 +315,90 @@ export default function App() {
 
   async function handleFilesSelect(files: (File | Blob)[]) {
     if (!user) return;
-    // AI Extraction is handled server-side; availability is verified at runtime.
-    const status = userService.canUpload(user, files.length);
-    if (!status.allowed) {
-      setIsPricingModalOpen(true);
+
+    setIsProcessing(true);
+    setProgressStatus('Validating files...');
+
+    // === Step 1: Validate PDF limits (page count, file count, total pages) ===
+    const validation = await validatePdfLimits(files);
+    if (!validation.valid) {
+      alert(validation.error);
+      setIsProcessing(false);
+      setProgressStatus('');
       return;
     }
 
-    setIsProcessing(true);
-    let successCount = 0;
+    const totalPages = validation.totalPages!;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    // === Step 2: Check usage limit with ACTUAL page count ===
+    const status = userService.canUpload(user, totalPages);
+    if (!status.allowed) {
+      const remaining = user.monthlyDocsLimit - user.docsUsedThisMonth;
+
+      let message = '';
+      if (status.reason === 'trial_limit') {
+        message = `This upload requires ${totalPages} documents but you have ${remaining} remaining in your trial. Upgrade to process more.`;
+      } else if (status.reason === 'plan_limit') {
+        message = `This upload requires ${totalPages} documents but you have ${remaining} remaining this month. Upgrade for higher limits.`;
+      } else if (status.reason === 'custom_limit') {
+        message = `This upload would exceed your custom monthly limit. Please contact support.`;
+      } else {
+        message = 'Your subscription has expired. Please renew to continue uploading.';
+      }
+
+      alert(message);
+      setIsPricingModalOpen(true);
+      setIsProcessing(false);
+      setProgressStatus('');
+      return;
+    }
+
+    // === Step 3: Split multi-page PDFs into individual pages ===
+    setProgressStatus('Preparing documents...');
+    const filesToProcess: Array<{ blob: File | Blob; displayName: string; sourceFile: string }> = [];
+
+    for (const file of files) {
       const fileName = file instanceof File ? file.name : `captured-receipt-${Date.now()}.jpg`;
-      setProgressStatus(`Analyzing ${i + 1}/${files.length}...`);
+
+      if (isPDF(file) && file instanceof File) {
+        setProgressStatus(`Splitting ${fileName}...`);
+        try {
+          const pages = await splitPdfIntoPages(file);
+          pages.forEach((pageBlob, index) => {
+            filesToProcess.push({
+              blob: pageBlob,
+              displayName: `${fileName} - Page ${index + 1}`,
+              sourceFile: fileName
+            });
+          });
+        } catch (error) {
+          console.error(`Failed to split PDF: ${fileName}`, error);
+          alert(`Failed to process "${fileName}". It may be corrupted or password-protected.`);
+          setIsProcessing(false);
+          setProgressStatus('');
+          return;
+        }
+      } else {
+        filesToProcess.push({
+          blob: file,
+          displayName: fileName,
+          sourceFile: fileName
+        });
+      }
+    }
+
+    // === Step 4: Process each page/file ===
+    let successCount = 0;
+    const filesBySource: Record<string, number> = {};
+
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const item = filesToProcess[i];
+      setProgressStatus(`Analyzing ${i + 1}/${filesToProcess.length}... (${item.displayName})`);
 
       try {
         const [data, imageInfo] = await Promise.all([
-          extractInvoiceData(file),
-          fileToGenerativePart(file)
+          extractInvoiceData(item.blob),
+          fileToGenerativePart(item.blob)
         ]);
 
         const newExpense: ExpenseItem = {
@@ -340,30 +406,44 @@ export default function App() {
           vendorName: data.vendorName || 'Unknown Vendor',
           date: formatDate(data.date),
           amount: Number(data.amount) || 0,
-          currency: budgets.defaultCurrency, // ALWAYS use global currency
+          currency: budgets.defaultCurrency,
           category: data.category as ExpenseCategory || ExpenseCategory.OTHERS,
           summary: data.summary || '',
           createdAt: Date.now(),
-          fileName: fileName,
+          fileName: item.displayName, // Use page-aware name
           imageData: `data:${imageInfo.mimeType};base64,${imageInfo.data}`,
           portfolioId: activePortfolioId || undefined,
           receiptId: data.receiptId || undefined
         };
+
         await db.add(newExpense, user.id);
         checkBudgetWarning(newExpense.category, newExpense.amount);
         successCount++;
+
+        // Track successful extractions per source file
+        filesBySource[item.sourceFile] = (filesBySource[item.sourceFile] || 0) + 1;
+
       } catch (error: any) {
-        console.error(`Extraction failed:`, error);
+        console.error(`Extraction failed for ${item.displayName}:`, error);
+        // Continue processing remaining pages
       }
     }
 
+    // === Step 5: Update user usage and refresh ===
     if (successCount > 0) {
       const updatedUser = await userService.recordUsage(user, successCount);
       setUser(updatedUser);
-      // Ensure we fetch the latest data from the DB to reflect the new additions
       await refreshExpenses();
-    } else if (files.length > 0) {
-      alert("AI was unable to extract data from the receipt(s). Please try again with a clearer photo or enter details manually.");
+
+      // Show success summary
+      const sourceCount = Object.keys(filesBySource).length;
+      const summary = sourceCount === 1
+        ? `✓ Successfully extracted ${successCount} invoice${successCount > 1 ? 's' : ''}`
+        : `✓ Successfully extracted ${successCount} invoices from ${sourceCount} documents`;
+
+      alert(summary);
+    } else if (filesToProcess.length > 0) {
+      alert("AI was unable to extract data from the documents. Please try again with clearer images or enter details manually.");
     }
 
     setIsProcessing(false);
