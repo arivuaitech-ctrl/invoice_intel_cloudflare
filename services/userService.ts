@@ -62,6 +62,18 @@ const mapProfile = (data: any): UserProfile => ({
 });
 
 export const userService = {
+  getTotalUserCount: async (): Promise<number> => {
+    const { count, error } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+
+    if (error) {
+      console.error('Error counting users:', error);
+      return 0; // Fail-open: allow registration if count fails
+    }
+    return count || 0;
+  },
+
   updateConsent: async (userId: string, version: string = '1.0'): Promise<UserProfile> => {
     const { data, error } = await supabase
       .from('profiles')
@@ -166,6 +178,15 @@ export const userService = {
         if (updated) return userService.refreshUserStatus(mapProfile(updated));
       }
       return userService.refreshUserStatus(profile);
+    }
+
+    // NEW USER: Check registration limit (250 users)
+    const totalUsers = await userService.getTotalUserCount();
+    console.log(`[UserService] Total users: ${totalUsers}`);
+
+    if (totalUsers >= 250) {
+      console.warn(`[UserService] Registration limit reached. Denying access to ${authUser.email}`);
+      throw new Error('REGISTRATION_LIMIT_REACHED');
     }
 
     const newProfile = {

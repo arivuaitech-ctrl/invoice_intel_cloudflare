@@ -71,6 +71,8 @@ export default function App() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [activePortfolioId, setActivePortfolioId] = useState<string | null>(null);
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>(''); // Toast notification
+  const [isAccessDenied, setIsAccessDenied] = useState(false); // Registration limit reached
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
@@ -166,7 +168,15 @@ export default function App() {
 
         setBudgets(savedBudgets);
         setIsPortfolioLoading(false);
-      } catch (err) {
+      } catch (err: any) {
+        // Check for registration limit error
+        if (err?.message === 'REGISTRATION_LIMIT_REACHED') {
+          console.log('[App] Registration limit reached, showing access denied screen');
+          setIsAccessDenied(true);
+          setLoading(false);
+          await supabase.auth.signOut(); // Sign out the blocked user
+          return;
+        }
         console.error("Data fetch error:", err);
       } finally {
         setLoading(false);
@@ -441,7 +451,8 @@ export default function App() {
         ? `✓ Successfully extracted ${successCount} invoice${successCount > 1 ? 's' : ''}`
         : `✓ Successfully extracted ${successCount} invoices from ${sourceCount} documents`;
 
-      alert(summary);
+      setToastMessage(summary);
+      setTimeout(() => setToastMessage(''), 5000); // Auto-hide after 5 seconds
     } else if (filesToProcess.length > 0) {
       alert("AI was unable to extract data from the documents. Please try again with clearer images or enter details manually.");
     }
@@ -647,6 +658,41 @@ export default function App() {
     return <LoginPage onLogin={() => userService.login()} />;
   }
 
+  // Access Denied Screen (Registration Limit Reached)
+  if (isAccessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertTriangle className="w-10 h-10 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-3">
+            Registration Currently Closed
+          </h2>
+          <p className="text-slate-600 mb-6">
+            We've reached our current user capacity limit. To request early access, please contact us:
+          </p>
+          <a
+            href="mailto:arivu.ai.tech@gmail.com?subject=Invoice Intel Access Request"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg w-full sm:w-auto"
+          >
+            <Crown className="w-5 h-5" />
+            Request Access
+          </a>
+          <p className="text-xs text-slate-400 mt-6">
+            arivu.ai.tech@gmail.com
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const badgeInfo = () => {
     if (user.isAdmin) return { text: 'Admin Mode', color: 'bg-purple-50 text-purple-700 border-purple-200' };
     if (user.isTrialActive) return { text: `Trial: ${user.monthlyDocsLimit - user.docsUsedThisMonth} left`, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
@@ -716,6 +762,22 @@ export default function App() {
             <span>AI EXTRACTION OFFLINE: Gemini API Key missing. Manual entry enabled.</span>
             <button onClick={() => window.location.reload()} className="underline flex items-center gap-1">
               <RefreshCw className="w-3 h-3" /> Retry
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-slideDown">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 min-w-[300px]">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-bold">{toastMessage}</span>
+            <button
+              onClick={() => setToastMessage('')}
+              className="ml-2 p-1 hover:bg-green-700 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -959,7 +1021,12 @@ export default function App() {
                           <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{expense.vendorName || '-'}</p>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <p className="text-[10px] sm:text-xs text-slate-500 italic truncate max-w-[150px] sm:max-w-[200px]">{expense.summary || '-'}</p>
+                          <p
+                            className="text-[10px] sm:text-xs text-slate-500 italic truncate max-w-[150px] sm:max-w-[200px] cursor-help"
+                            title={expense.summary || '-'}
+                          >
+                            {expense.summary || '-'}
+                          </p>
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           {expense.receiptId ? (
