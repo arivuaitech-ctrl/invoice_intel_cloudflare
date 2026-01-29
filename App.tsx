@@ -951,7 +951,10 @@ export default function App() {
                         <Tooltip
                           cursor={{ fill: '#f8fafc' }}
                           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
-                          formatter={(value: any) => [`${budgets.defaultCurrency} ${Number(value || 0).toFixed(2)}`, 'Total']}
+                          formatter={(value: any, name: any, props: any) => [
+                            `${budgets.defaultCurrency} ${Number(value || 0).toFixed(2)}`,
+                            props.payload.name || 'Category'
+                          ]}
                         />
                         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                           {stats.categoryBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -979,90 +982,93 @@ export default function App() {
                   <Button variant="secondary" className="flex-1 sm:flex-none text-[10px] sm:text-xs py-2" onClick={handleExport} icon={<Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}>Export</Button>
                 </div>
               </div>
+              {/* Table Container with Max 8 Rows Visible */}
               <div className="overflow-x-auto w-full -mx-4 sm:mx-0 px-4 sm:px-0">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50/50">
-                    <tr>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Date</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Vendor Name</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Summary</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt ID</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
-                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-slate-100">
-                    {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => (
-                      <tr key={expense.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          {expense.imageData ? (
-                            <div
-                              onClick={() => setViewingImage({ url: expense.imageData!, title: expense.vendorName })}
-                              className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden cursor-pointer hover:ring-2 ring-indigo-500 transition-all flex items-center justify-center shrink-0"
-                            >
-                              {expense.imageData.startsWith('data:application/pdf') ? (
-                                <List className="w-5 h-5 text-slate-400" />
-                              ) : (
-                                <img src={expense.imageData} className="w-full h-full object-cover" />
-                              )}
-                            </div>
-                          ) : (
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center">
-                              <ImageIcon className="w-4 h-4 text-slate-300" />
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{expense.vendorName || '-'}</p>
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <p
-                            className="text-[10px] sm:text-xs text-slate-500 italic truncate max-w-[150px] sm:max-w-[200px] cursor-help"
-                            title={expense.summary || '-'}
-                          >
-                            {expense.summary || '-'}
-                          </p>
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          {expense.receiptId ? (
-                            <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[8px] sm:text-[9px] font-black text-slate-500">
-                              {expense.receiptId}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-300">-</span>
-                          )}
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                          <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
-                            {expense.category}
-                          </span>
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right font-black text-slate-900">
-                          <span className="text-[8px] sm:text-[10px] text-slate-400 mr-0.5 sm:mr-1">{expense.currency}</span>
-                          {(Number(expense.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-right text-sm font-medium">
-                          <div className="flex justify-end gap-1">
-                            <button onClick={() => { setEditingItem(expense); setIsModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-1.5 sm:p-2 rounded-lg hover:bg-indigo-50"><Edit2 className="w-4 h-4" /></button>
-                            <button onClick={() => handleDelete(expense.id)} className="text-slate-400 hover:text-red-600 p-1.5 sm:p-2 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    )) : (
+                <div className="max-h-[480px] overflow-y-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50/50">
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
-                          <Sparkles className="w-8 h-8 mb-2 mx-auto opacity-20" />
-                          <p className="text-sm font-bold">Start tracking your claims and bookkeeping today.</p>
-                        </td>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Date</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Vendor Name</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Summary</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Receipt ID</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Category</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Amount</th>
+                        <th className="px-3 sm:px-6 py-3 sm:py-4 text-right text-[9px] sm:text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-100">
+                      {filteredExpenses.length > 0 ? filteredExpenses.map((expense) => (
+                        <tr key={expense.id} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            {expense.imageData ? (
+                              <div
+                                onClick={() => setViewingImage({ url: expense.imageData!, title: expense.vendorName })}
+                                className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden cursor-pointer hover:ring-2 ring-indigo-500 transition-all flex items-center justify-center shrink-0"
+                              >
+                                {expense.imageData.startsWith('data:application/pdf') ? (
+                                  <List className="w-5 h-5 text-slate-400" />
+                                ) : (
+                                  <img src={expense.imageData} className="w-full h-full object-cover" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center">
+                                <ImageIcon className="w-4 h-4 text-slate-300" />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            <p className="text-[10px] sm:text-xs font-medium text-slate-500">{expense.date}</p>
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            <p className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{expense.vendorName || '-'}</p>
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            <p
+                              className="text-[10px] sm:text-xs text-slate-500 italic truncate max-w-[150px] sm:max-w-[200px] cursor-help"
+                              title={expense.summary || '-'}
+                            >
+                              {expense.summary || '-'}
+                            </p>
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            {expense.receiptId ? (
+                              <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[8px] sm:text-[9px] font-black text-slate-500">
+                                {expense.receiptId}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+                            <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+                              {expense.category}
+                            </span>
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-right font-black text-slate-900">
+                            <span className="text-[8px] sm:text-[10px] text-slate-400 mr-0.5 sm:mr-1">{expense.currency}</span>
+                            {(Number(expense.amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-3 sm:px-6 py-3 sm:py-4 text-right text-sm font-medium">
+                            <div className="flex justify-end gap-1">
+                              <button onClick={() => { setEditingItem(expense); setIsModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-1.5 sm:p-2 rounded-lg hover:bg-indigo-50"><Edit2 className="w-4 h-4" /></button>
+                              <button onClick={() => handleDelete(expense.id)} className="text-slate-400 hover:text-red-600 p-1.5 sm:p-2 rounded-lg hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                            <Sparkles className="w-8 h-8 mb-2 mx-auto opacity-20" />
+                            <p className="text-sm font-bold">Start tracking your claims and bookkeeping today.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </>

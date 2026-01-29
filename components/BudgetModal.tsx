@@ -99,7 +99,6 @@ const BudgetModal: React.FC<BudgetModalProps> = ({
                     <input
                       type="number"
                       min="0"
-                      step="10"
                       className="block w-full rounded-xl border-slate-200 pl-10 focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2 bg-white text-slate-900 font-bold"
                       value={localMap[cat] || ''}
                       onChange={(e) => handleChange(cat, e.target.value)}
