@@ -114,6 +114,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <p className="mt-2 text-sm text-slate-500 font-medium">
           Smart Travel Claim, Bookkeeping or Expense Tracking for Professionals and Individuals
         </p>
+        <a
+          href="https://www.arivu-ai.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors"
+        >
+          arivu-ai.com
+        </a>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">

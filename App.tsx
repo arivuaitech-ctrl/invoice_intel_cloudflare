@@ -352,6 +352,8 @@ export default function App() {
         message = `This upload requires ${totalPages} documents but you have ${remaining} remaining this month. Upgrade for higher limits.`;
       } else if (status.reason === 'custom_limit') {
         message = `This upload would exceed your custom monthly limit. Please contact support.`;
+      } else if (status.reason === 'suspicious_limit') {
+        message = `Your account has reached the maximum monthly scanning limit (2500). To prevent suspicious activity or bot usage, your account has been temporarily restricted. Please contact arivu.ai.tech@gmail.com to verify and unblock your account.`;
       } else {
         message = 'Your subscription has expired. Please renew to continue uploading.';
       }
@@ -1127,9 +1129,20 @@ export default function App() {
       />
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border-t border-slate-100 mt-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-slate-400 font-medium">
-            © {new Date().getFullYear()} InvoiceIntel. All rights reserved.
-          </p>
+          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
+            <p className="text-xs text-slate-400 font-medium">
+              © {new Date().getFullYear()} InvoiceIntel. All rights reserved.
+            </p>
+            <span className="hidden md:block text-slate-200">|</span>
+            <a
+              href="https://www.arivu-ai.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-600 transition-colors"
+            >
+              arivu-ai.com
+            </a>
+          </div>
           <div className="flex gap-6">
             <button
               onClick={() => setLegalModal({ isOpen: true, type: 'privacy' })}

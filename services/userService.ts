@@ -61,6 +61,8 @@ const mapProfile = (data: any): UserProfile => ({
   defaultCurrency: 'USD' // Force USD always
 });
 
+const BUSINESS_MAX_MONTHLY_LIMIT = 2500;
+
 export const userService = {
   getTotalUserCount: async (): Promise<number> => {
     const { count, error } = await supabase
@@ -218,7 +220,6 @@ export const userService = {
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
     // Safety check: trial logic
-    // If trialStartDate is 0 or missing, it's a new or broken user - initialize it
     if (updated.planId === 'free' && (!updated.trialStartDate || updated.trialStartDate === 0)) {
       updated.trialStartDate = now;
       updated.isTrialActive = true;
@@ -229,7 +230,6 @@ export const userService = {
 
     if (updated.planId === 'free') {
       updated.isTrialActive = !isTrialExpired && !updated.isAdmin;
-      // If trial is still active but docs limit is somehow 0, reset to trial default (10)
       if (updated.isTrialActive && updated.monthlyDocsLimit === 0) {
         updated.monthlyDocsLimit = 10;
       }
@@ -237,11 +237,10 @@ export const userService = {
       updated.isTrialActive = false;
     }
 
-    // Only lock paid accounts if they have an actual expiry date set in the past
     if (user.planId !== 'free' && user.subscriptionExpiry) {
       if (now > user.subscriptionExpiry) {
         updated.planId = 'free';
-        updated.monthlyDocsLimit = 0; // Lock account on true expiry
+        updated.monthlyDocsLimit = 0;
         updated.subscriptionExpiry = null;
         updated.isTrialActive = false;
       }
@@ -250,37 +249,34 @@ export const userService = {
     return updated;
   },
 
-  canUpload: (user: UserProfile, fileCount: number): { allowed: boolean; reason?: 'trial_limit' | 'plan_limit' | 'expired' | 'custom_limit' } => {
+  canUpload: (user: UserProfile, fileCount: number): { allowed: boolean; reason?: 'trial_limit' | 'plan_limit' | 'expired' | 'custom_limit' | 'suspicious_limit' } => {
     if (user.isAdmin) return { allowed: true };
 
     const futureUsage = (user.docsUsedThisMonth || 0) + fileCount;
 
-    // Trial check
     if (user.isTrialActive && user.planId === 'free') {
       if (futureUsage > user.monthlyDocsLimit) return { allowed: false, reason: 'trial_limit' };
       return { allowed: true };
     }
 
-    // Subscription check
     if (user.planId !== 'free') {
-      // Allow a grace period of 28 hours if expiry is just reached (payment retry window)
+      if (user.planId === 'business' && futureUsage > BUSINESS_MAX_MONTHLY_LIMIT) {
+        return { allowed: false, reason: 'suspicious_limit' };
+      }
+
       const gracePeriod = 28 * 60 * 60 * 1000;
       if (user.subscriptionExpiry && (Date.now() > user.subscriptionExpiry + gracePeriod)) {
         return { allowed: false, reason: 'expired' };
       }
 
-      // Check Business User Custom Limit (Hard Stop)
       if (user.planId === 'business' && user.customUsageLimit && futureUsage > user.customUsageLimit) {
         return { allowed: false, reason: 'custom_limit' };
       }
 
-      // Start Overage check logic
       if (user.planId === 'business') {
-        // Business users rely on metered billing for overage, so we allow unless hard custom limit hit
         return { allowed: true };
       }
 
-      // Regular Plan Limit
       if (futureUsage > user.monthlyDocsLimit) {
         return { allowed: false, reason: 'plan_limit' };
       }
@@ -293,7 +289,6 @@ export const userService = {
   recordUsage: async (user: UserProfile, fileCount: number): Promise<UserProfile> => {
     const newCount = (user.docsUsedThisMonth || 0) + fileCount;
 
-    // 1. Update Database
     const { data, error } = await supabase
       .from('profiles')
       .update({ docs_used_this_month: newCount })
@@ -303,17 +298,6 @@ export const userService = {
 
     if (error) throw error;
 
-    // 2. Report Usage to Stripe if Business Plan and over limit
-    // We report usage for *every* upload if they are on metered plan, OR only if above limit?
-    // Stripe "metered" usage usually requires reporting ALL usage, OR delta.
-    // However, our model is: Included 500, then metered.
-    // If Stripe Price is configured as "Cluster" or "Tiered", we might report everything.
-    // BUT simplest approach: If user is Business, we report the *increment* (fileCount) to the endpoint.
-    // The Endpoint will check if it needs to report to Stripe based on total usage vs limit, 
-    // OR if the Stripe Price is "Overage Only", we only report if total > 500.
-    // Let's delegate this logic to the backend to keep client secret safe.
-
-    // 2. Report Usage to API for Block Billing ($5 / 100 extra)
     if (user.planId === 'business' && user.subscriptionItemId) {
       console.log(`[UserService] Reporting usage for business user. Count: ${newCount}, SubItemID: ${user.subscriptionItemId}`);
 

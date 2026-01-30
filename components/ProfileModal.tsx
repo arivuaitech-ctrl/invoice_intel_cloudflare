@@ -236,6 +236,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                                     <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
                                         <span className="font-bold text-indigo-600">Arivu</span> stands for <span className="italic">Intelligence</span> in Tamil. As part of a team with 15+ years in Data & Insights, ARIVU-AI creates tools to empower Malaysians and global citizens to focus on human creativity rather than repetitive tasks.
                                     </p>
+                                    <a
+                                        href="https://www.arivu-ai.com/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 transition-colors"
+                                    >
+                                        <Globe className="w-3 h-3" />
+                                        Visit arivu-ai.com
+                                    </a>
                                 </div>
 
                                 <div className="flex items-center gap-2 mb-4">
