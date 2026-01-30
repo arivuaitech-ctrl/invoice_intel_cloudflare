@@ -291,8 +291,28 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, user, onLo
                                         answer="Since images are stored locally, they won't follow you to different browsers or computers. You'll see the expense data, but not the images."
                                     />
                                     <FAQItem
+                                        question="Can I export my data?"
+                                        answer="Yes! Click the Download icon on the top right to export your filtered expenses to an Excel (.xlsx) file, ready for bookkeeping or travel claims."
+                                    />
+                                    <FAQItem
+                                        question="What if the AI makes a mistake?"
+                                        answer="You can manually correct any field by clicking the 'Edit' icon next to an expense. Clearer receipt photos result in better AI accuracy."
+                                    />
+                                    <FAQItem
+                                        question="Do you support multi-page PDFs?"
+                                        answer="Yes, Invoice Intel automatically splits multi-page PDF documents and processes each page as a separate receipt for you."
+                                    />
+                                    <FAQItem
+                                        question="How many pages can I create?"
+                                        answer="You can create up to 10 separate pages (Portfolios) to organize different projects, trips, or personal vs business expenses."
+                                    />
+                                    <FAQItem
                                         question="How do I cancel my subscription?"
                                         answer="Click 'Manage Billing' above to be redirected to the secure Stripe portal where you can cancel or change your plan anytime."
+                                    />
+                                    <FAQItem
+                                        question="What happens if I reach my limit?"
+                                        answer="On Free/Trial plans, you'll need to upgrade or wait until next month. Business users can set a 'Hard Cap' and pay for extra usage ($5 per 100 receipts)."
                                     />
                                 </div>
                             </div>
